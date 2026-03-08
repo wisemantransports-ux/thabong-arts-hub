@@ -1,20 +1,12 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 
-const USE_MOCK_DATA = process.env.NEXT_PUBLIC_SUPABASE_URL === 'https://placeholder.supabase.co';
-
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
     request: {
       headers: request.headers,
     },
   })
-
-  // When using mock data, we don't have a real session, so we bypass auth checks.
-  // This allows viewing dashboard pages for development purposes without a live database.
-  if (USE_MOCK_DATA) {
-    return response;
-  }
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

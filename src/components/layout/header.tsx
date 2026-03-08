@@ -20,8 +20,6 @@ const navLinks = [
   { href: '/contact', label: 'Contact' },
 ];
 
-const USE_MOCK_DATA = process.env.NEXT_PUBLIC_SUPABASE_URL === 'https://placeholder.supabase.co';
-
 export default function Header() {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -31,12 +29,6 @@ export default function Header() {
   const isDashboard = pathname.startsWith('/dashboard') || pathname.startsWith('/admin');
   
   useEffect(() => {
-    if (USE_MOCK_DATA) {
-        setIsLoading(false);
-        setSession(null); 
-        return;
-    }
-
     const supabase = createClient();
     const getSession = async () => {
       const { data } = await supabase.auth.getSession();
