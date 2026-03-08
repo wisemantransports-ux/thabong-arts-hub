@@ -2,10 +2,9 @@ import { createClient } from '@/lib/supabase/server';
 import { Artwork, Artist, Event, Business, ArtworkWithArtist } from './types';
 import { notFound } from 'next/navigation';
 
-const supabase = createClient();
-
 // ARTISTS
 export async function getArtists(): Promise<Artist[]> {
+  const supabase = createClient();
   const { data, error } = await supabase.from('artists').select('*');
   if (error) {
     console.error('Error fetching artists:', error.message);
@@ -15,6 +14,7 @@ export async function getArtists(): Promise<Artist[]> {
 }
 
 export async function getArtistBySlug(slug: string): Promise<Artist> {
+  const supabase = createClient();
   const { data, error } = await supabase.from('artists').select('*').eq('slug', slug).single();
   if (error || !data) {
     console.error(`Error fetching artist with slug ${slug}:`, error?.message);
@@ -24,6 +24,7 @@ export async function getArtistBySlug(slug: string): Promise<Artist> {
 }
 
 export async function getArtistById(id: string): Promise<Artist> {
+    const supabase = createClient();
     const { data, error } = await supabase.from('artists').select('*').eq('id', id).single();
     if (error || !data) {
       console.error(`Error fetching artist with id ${id}:`, error?.message);
@@ -34,6 +35,7 @@ export async function getArtistById(id: string): Promise<Artist> {
 
 // ARTWORKS
 export async function getArtworks(filters: { artist_id?: string; limit?: number } = {}): Promise<ArtworkWithArtist[]> {
+  const supabase = createClient();
   let query = supabase
     .from('artworks')
     .select('*, artists (name, slug, phone, profile_image, bio)')
@@ -57,6 +59,7 @@ export async function getArtworks(filters: { artist_id?: string; limit?: number 
 }
 
 export async function getArtworkById(id: string): Promise<ArtworkWithArtist> {
+  const supabase = createClient();
   const { data, error } = await supabase
     .from('artworks')
     .select('*, artists (name, slug, phone, profile_image, bio)')
@@ -72,6 +75,7 @@ export async function getArtworkById(id: string): Promise<ArtworkWithArtist> {
 
 // EVENTS
 export async function getEvents(filters: { limit?: number, past?: boolean } = {}): Promise<Event[]> {
+  const supabase = createClient();
   let query = supabase
     .from('events')
     .select('*')
@@ -91,6 +95,7 @@ export async function getEvents(filters: { limit?: number, past?: boolean } = {}
 
 // BUSINESSES
 export async function getBusinesses(filters: { limit?: number } = {}): Promise<Business[]> {
+    const supabase = createClient();
     let query = supabase.from('businesses').select('*');
 
     if(filters.limit){
@@ -106,6 +111,7 @@ export async function getBusinesses(filters: { limit?: number } = {}): Promise<B
 }
 
 export async function getBusinessBySlug(slug: string): Promise<Business> {
+    const supabase = createClient();
     const { data, error } = await supabase.from('businesses').select('*').eq('slug', slug).single();
     if (error || !data) {
         console.error(`Error fetching business with slug ${slug}:`, error?.message);
