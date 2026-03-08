@@ -13,18 +13,20 @@ import { getArtworks } from '@/lib/data';
 export default async function MyArtworksPage() {
   const supabase = createServerSupabaseClient();
 
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session?.user) redirect('/login');
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    redirect('/login?next=/dashboard/artworks');
+  }
 
   const { data: artist, error: artistError } = await supabase
     .from('artists')
     .select('*')
-    .eq('user_id', session.user.id)
+    .eq('user_id', user.id)
     .single();
 
   // If artist profile is missing or incomplete, redirect them to create it.
   if (artistError || !artist || !artist.name) {
-    redirect('/dashboard/edit-profile');
+    redirect('/dashboard/edit-profile?next=/dashboard/artworks');
   }
 
   // Fetch artworks scoped to the logged-in artist

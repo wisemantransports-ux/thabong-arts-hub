@@ -12,13 +12,15 @@ export const metadata = {
 export default async function EditProfilePage() {
   const supabase = createServerSupabaseClient();
 
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session?.user) redirect('/login');
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    redirect('/login?next=/dashboard/edit-profile');
+  }
 
   const { data: artist, error } = await supabase
     .from('artists')
     .select('*')
-    .eq('user_id', session.user.id)
+    .eq('user_id', user.id)
     .single();
 
   // Handle database errors, but ignore "PGRST116" (no row found), as this is expected for new users.
@@ -41,13 +43,13 @@ export default async function EditProfilePage() {
   // The form's server action will then 'upsert' this data to create the profile.
   const artistData = artist || {
     id: '', // No ID yet for a new profile
-    user_id: session.user.id,
-    email: session.user.email || '',
+    user_id: user.id,
+    email: user.email || '',
     name: '',
     slug: '',
     bio: '',
     phone: '',
-    profile_image: `https://picsum.photos/seed/${session.user.id}/400/400`,
+    profile_image: `https://picsum.photos/seed/${user.id}/400/400`,
     created_at: '',
   };
 

@@ -8,26 +8,24 @@ import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 export default async function DashboardPage() {
-  // ✅ Server-side Supabase client to securely get the session
   const supabase = createServerSupabaseClient();
 
-  // ✅ Server-side session check. Middleware has already run, but we double-check.
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session?.user) redirect('/login');
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    redirect('/login?next=/dashboard');
+  }
 
-  // ✅ Get artist for the *currently logged-in user*
   const { data: artist, error: artistError } = await supabase
     .from('artists')
     .select('*')
-    .eq('user_id', session.user.id)
+    .eq('user_id', user.id)
     .single();
 
   // If artist profile is missing or incomplete (name is empty), force the user to complete it.
-  if (!artist || artistError || !artist.name) {
+  if (artistError || !artist || !artist.name) {
     redirect('/dashboard/edit-profile');
   }
 
-  // ✅ Fetch artworks scoped to the logged-in artist
   const artworks: Artwork[] = await getArtworks({ artist_id: artist.id });
 
   const totalArtworks = artworks.length;

@@ -2,15 +2,13 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
-  // This `response` object is used to set cookies on the client.
+  // The `res` object is used to setting cookies on the client.
   let response = NextResponse.next({
     request: {
       headers: request.headers,
     },
   })
 
-  // The createServerClient function needs a cookies object with get, set, and remove methods.
-  // This object is created here to read cookies from the incoming request and write them to the outgoing response.
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -46,17 +44,18 @@ export async function middleware(request: NextRequest) {
   // This will refresh the session cookie if it's expired.
   const { data: { user } } = await supabase.auth.getUser()
 
-  // If the user is not logged in and is trying to access a protected route,
-  // redirect them to the login page.
-  if (!user) {
+  // Protect dashboard routes
+  if (!user && request.nextUrl.pathname.startsWith('/dashboard')) {
     const loginUrl = new URL('/login', request.url)
-    // Add the 'next' parameter to redirect them back after login.
     loginUrl.searchParams.set('next', request.nextUrl.pathname)
     return NextResponse.redirect(loginUrl)
   }
 
-  // If the user is logged in, allow the request to proceed.
-  // The individual dashboard pages will handle fetching their own data and profile completion checks.
+  // If user is trying to access login/signup but is already logged in, redirect to dashboard
+  if (user && (request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/signup')) {
+    return NextResponse.redirect(new URL('/dashboard', request.url))
+  }
+
   return response
 }
 
@@ -67,12 +66,8 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     * - and any file extensions (e.g., .svg, .png)
-     * This ensures the middleware runs on all our application pages.
+     * - and any file extensions.
      */
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
-    // Specifically re-include the routes we absolutely want to protect
-    '/dashboard/:path*',
-    '/admin/:path*'
   ],
 }
