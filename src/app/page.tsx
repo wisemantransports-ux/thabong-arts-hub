@@ -11,11 +11,10 @@ import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
 
 export default async function Home() {
-  const featuredArtworks = (await getArtworks()).slice(0, 6);
-  const featuredArtists = (await getArtists()).slice(0, 3);
-  const allEvents = await getEvents();
-  const upcomingEvents = allEvents.filter(event => new Date(event.event_date) >= new Date()).slice(0, 3);
-  const creativeBusinesses = (await getBusinesses()).slice(0, 3);
+  const featuredArtworks = await getArtworks({ limit: 6 });
+  const featuredArtists = await getArtists();
+  const upcomingEvents = (await getEvents()).filter(event => new Date(event.event_date) >= new Date()).slice(0, 3);
+  const creativeBusinesses = await getBusinesses({ limit: 3 });
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -66,13 +65,13 @@ export default async function Home() {
                           className="object-cover transition-transform duration-300 group-hover:scale-105"
                           data-ai-hint="artwork painting"
                         />
-                         {artwork.status === 'sold' && (
-                          <Badge variant="destructive" className="absolute top-2 right-2">Sold</Badge>
+                         {artwork.status !== 'available' && (
+                          <Badge variant="destructive" className="absolute top-2 right-2">{artwork.status}</Badge>
                         )}
                       </div>
                       <div className="p-4">
                         <h3 className="font-headline font-semibold text-lg truncate">{artwork.title}</h3>
-                        <p className="text-muted-foreground">{artwork.artist_name}</p>
+                        <p className="text-muted-foreground">{artwork.artists?.name}</p>
                         <p className="font-semibold mt-2">BWP {artwork.price.toLocaleString()}</p>
                       </div>
                     </Link>
@@ -93,7 +92,7 @@ export default async function Home() {
               </Button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-              {featuredArtists.map((artist) => (
+              {featuredArtists.slice(0, 3).map((artist) => (
                 <Card key={artist.id} className="group text-center">
                   <CardContent className="p-6">
                     <Link href={`/artists/${artist.slug}`}>
@@ -117,53 +116,55 @@ export default async function Home() {
         </section>
 
         {/* Upcoming Events */}
-        <section className="py-16 lg:py-24 bg-background">
-          <div className="container mx-auto px-4">
-             <div className="flex justify-between items-center mb-8">
-                <h2 className="text-3xl font-headline font-bold">Upcoming Events</h2>
-                <Button variant="ghost" asChild>
-                  <Link href="/events">All Events <ArrowRight className="ml-2 h-4 w-4" /></Link>
-                </Button>
-              </div>
-            <Carousel opts={{ align: "start", loop: true }} className="w-full">
-              <CarouselContent>
-                {upcomingEvents.map((event) => (
-                  <CarouselItem key={event.id} className="md:basis-1/2 lg:basis-1/3">
-                    <div className="p-1">
-                      <Card className="overflow-hidden group">
-                        <CardContent className="p-0">
-                          <div className="relative aspect-video">
-                            <Image
-                              src={event.image_url}
-                              alt={event.title}
-                              fill
-                              className="object-cover transition-transform duration-300 group-hover:scale-105"
-                              data-ai-hint="event poster"
-                            />
-                          </div>
-                          <div className="p-6">
-                            <h3 className="font-headline font-bold text-xl mb-2">{event.title}</h3>
-                            <p className="text-muted-foreground mb-4 line-clamp-2">{event.description}</p>
-                            <div className="flex items-center text-sm text-muted-foreground mb-2">
-                              <CalendarIcon className="mr-2 h-4 w-4" />
-                              <span>{new Date(event.event_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+        {upcomingEvents.length > 0 && (
+          <section className="py-16 lg:py-24 bg-background">
+            <div className="container mx-auto px-4">
+              <div className="flex justify-between items-center mb-8">
+                  <h2 className="text-3xl font-headline font-bold">Upcoming Events</h2>
+                  <Button variant="ghost" asChild>
+                    <Link href="/events">All Events <ArrowRight className="ml-2 h-4 w-4" /></Link>
+                  </Button>
+                </div>
+              <Carousel opts={{ align: "start", loop: upcomingEvents.length > 2 }} className="w-full">
+                <CarouselContent>
+                  {upcomingEvents.map((event) => (
+                    <CarouselItem key={event.id} className="md:basis-1/2 lg:basis-1/3">
+                      <div className="p-1">
+                        <Card className="overflow-hidden group">
+                          <CardContent className="p-0">
+                            <div className="relative aspect-video">
+                              <Image
+                                src={event.image_url}
+                                alt={event.title}
+                                fill
+                                className="object-cover transition-transform duration-300 group-hover:scale-105"
+                                data-ai-hint="event poster"
+                              />
                             </div>
-                            <div className="flex items-center text-sm text-muted-foreground">
-                              <MapPin className="mr-2 h-4 w-4" />
-                              <span>{event.location}</span>
+                            <div className="p-6">
+                              <h3 className="font-headline font-bold text-xl mb-2">{event.title}</h3>
+                              <p className="text-muted-foreground mb-4 line-clamp-2">{event.description}</p>
+                              <div className="flex items-center text-sm text-muted-foreground mb-2">
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                <span>{new Date(event.event_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                              </div>
+                              <div className="flex items-center text-sm text-muted-foreground">
+                                <MapPin className="mr-2 h-4 w-4" />
+                                <span>{event.location}</span>
+                              </div>
                             </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </div>
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-              <CarouselPrevious className="ml-12" />
-              <CarouselNext className="mr-12"/>
-            </Carousel>
-          </div>
-        </section>
+                          </CardContent>
+                        </Card>
+                      </div>
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+                <CarouselPrevious className="ml-12" />
+                <CarouselNext className="mr-12"/>
+              </Carousel>
+            </div>
+          </section>
+        )}
 
         {/* Creative Businesses */}
         <section className="py-16 lg:py-24 bg-secondary">
@@ -172,9 +173,9 @@ export default async function Home() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {creativeBusinesses.map(business => (
                 <Card key={business.id} className="group overflow-hidden">
-                  <Link href={`/businesses/${business.slug}`}>
+                   <Link href={`/businesses/${business.slug}`}>
                     <CardContent className="p-0 flex flex-col md:flex-row">
-                      <div className="relative w-full md:w-1/3 aspect-square">
+                      <div className="relative w-full md:w-1/3 aspect-video md:aspect-square">
                         <Image
                           src={business.image_url}
                           alt={business.name}

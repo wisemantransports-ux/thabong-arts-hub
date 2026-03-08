@@ -1,10 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
-  Palette,
   Paintbrush,
   User,
   LogOut,
@@ -35,20 +34,19 @@ const navItems = [
   { href: '/admin/events', icon: Calendar, label: 'Events' },
 ];
 
+// In a real app, you would fetch the user from the session
+const user = {
+    name: 'Admin User',
+    email: 'admin@example.com',
+    avatar: 'https://picsum.photos/seed/admin/100/100',
+};
+
 export default function AdminSidebar({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const router = useRouter();
-
-  const handleLogout = () => {
-    // In a real app, you would handle signout
-    console.log("Logging out...");
-    router.push('/');
-  };
-
   const currentPage = navItems.slice().reverse().find(item => pathname.startsWith(item.href));
 
 
@@ -82,30 +80,32 @@ export default function AdminSidebar({
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter className="border-t p-2 flex-col gap-2">
-          <SidebarMenu>
-             <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Back to Site">
-                  <Link href="/">
-                    <Home />
-                    <span>Back to Site</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-             <SidebarMenuItem>
-                <SidebarMenuButton onClick={handleLogout} tooltip="Logout">
-                  <LogOut />
-                  <span>Logout</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-          </SidebarMenu>
+           <form action="/auth/sign-out" method="post" className="w-full">
+            <SidebarMenu>
+                <SidebarMenuItem>
+                    <SidebarMenuButton asChild tooltip="Back to Site">
+                    <Link href="/">
+                        <Home />
+                        <span>Back to Site</span>
+                    </Link>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                    <SidebarMenuButton type="submit" tooltip="Logout" className="w-full">
+                        <LogOut />
+                        <span>Logout</span>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+            </SidebarMenu>
+          </form>
            <div className="flex items-center gap-2 p-2 rounded-md bg-sidebar-accent">
                 <Avatar className="h-9 w-9">
-                  <AvatarImage src="https://picsum.photos/seed/admin/100/100" alt="Admin User" />
+                  <AvatarImage src={user.avatar} alt={user.name} />
                   <AvatarFallback>A</AvatarFallback>
                 </Avatar>
                 <div className="group-data-[collapsible=icon]:hidden">
-                    <p className="text-sm font-semibold text-sidebar-accent-foreground">Admin User</p>
-                    <p className="text-xs text-muted-foreground">admin@example.com</p>
+                    <p className="text-sm font-semibold text-sidebar-accent-foreground">{user.name}</p>
+                    <p className="text-xs text-muted-foreground">{user.email}</p>
                 </div>
             </div>
         </SidebarFooter>

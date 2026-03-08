@@ -3,9 +3,9 @@
 import { useState, useMemo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 
-import { Artwork, Artist } from '@/lib/types';
+import { Artist, ArtworkWithArtist } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -15,7 +15,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 
 interface ArtworksGridProps {
-  artworks: Artwork[];
+  artworks: ArtworkWithArtist[];
   artists: Artist[];
   categories: string[];
 }
@@ -32,7 +32,7 @@ export default function ArtworksGrid({ artworks, artists, categories }: Artworks
     return artworks.filter(artwork => {
       const searchMatch = searchTerm === '' ||
         artwork.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        artwork.artist_name.toLowerCase().includes(searchTerm.toLowerCase());
+        artwork.artists?.name.toLowerCase().includes(searchTerm.toLowerCase());
       const artistMatch = selectedArtist === 'all' || artwork.artist_id === selectedArtist;
       const categoryMatch = selectedCategory === 'all' || artwork.category === selectedCategory;
       const availabilityMatch = !showAvailableOnly || artwork.status === 'available';
@@ -89,7 +89,6 @@ export default function ArtworksGrid({ artworks, artists, categories }: Artworks
         </div>
       </div>
       
-      <AnimatePresence>
         <motion.div 
             layout 
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
@@ -114,13 +113,13 @@ export default function ArtworksGrid({ artworks, artists, categories }: Artworks
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                         data-ai-hint="artwork painting"
                       />
-                      {artwork.status === 'sold' && (
-                        <Badge variant="destructive" className="absolute top-2 right-2">Sold</Badge>
+                      {artwork.status !== 'available' && (
+                        <Badge variant="destructive" className="absolute top-2 right-2 capitalize">{artwork.status}</Badge>
                       )}
                     </div>
                     <div className="p-4 flex flex-col flex-grow">
                       <h3 className="font-headline font-semibold text-lg truncate">{artwork.title}</h3>
-                      <p className="text-muted-foreground">{artwork.artist_name}</p>
+                      <p className="text-muted-foreground">{artwork.artists?.name}</p>
                       <div className="flex-grow" />
                       <p className="font-semibold mt-2">BWP {artwork.price.toLocaleString()}</p>
                     </div>
@@ -130,7 +129,6 @@ export default function ArtworksGrid({ artworks, artists, categories }: Artworks
             </motion.div>
           ))}
         </motion.div>
-      </AnimatePresence>
       {filteredArtworks.length === 0 && (
         <div className="text-center col-span-full py-16">
             <p className="text-muted-foreground">No artworks match your filters.</p>

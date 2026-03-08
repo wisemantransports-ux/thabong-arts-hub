@@ -2,6 +2,7 @@ import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
 import { getArtworks, getArtists } from '@/lib/data';
 import ArtworksGrid from './_components/artworks-grid';
+import { ArtworkWithArtist } from '@/lib/types';
 
 export const metadata = {
   title: 'Artworks Gallery | Thapong Visual Art Centre',
@@ -9,7 +10,7 @@ export const metadata = {
 };
 
 export default async function ArtworksPage() {
-  const artworks = await getArtworks();
+  const artworks = await getArtworks() as ArtworkWithArtist[];
   const artists = await getArtists();
   const categories = [...new Set(artworks.map(a => a.category))];
 

@@ -1,9 +1,8 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 
-import { getArtworkById, getArtistById } from '@/lib/data-mock'; // Using a separate mock with getArtistById
+import { getArtworkById } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,16 +18,10 @@ type Props = {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const artwork = await getArtworkById(params.id);
 
-  if (!artwork) {
-    return {
-      title: 'Artwork Not Found',
-    };
-  }
-
   const seoData = await generateArtworkSeoMetadata({
     artworkTitle: artwork.title,
     artworkDescription: artwork.description,
-    artistName: artwork.artist_name,
+    artistName: artwork.artists?.name || 'Unknown Artist',
     artworkCategory: artwork.category,
     artworkPrice: artwork.price,
   });
@@ -54,17 +47,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ArtworkDetailPage({ params }: Props) {
   const artwork = await getArtworkById(params.id);
-  
-  if (!artwork) {
-    notFound();
-  }
-  
-  const artist = await getArtistById(artwork.artist_id);
+  const artist = artwork.artists;
 
   const whatsappMessage = encodeURIComponent(
     `Hello, I am interested in your artwork "${artwork.title}" from the Thapong Visual Art Centre website.`
   );
-  const whatsappUrl = `https://wa.me/${artwork.artist_phone}?text=${whatsappMessage}`;
+  const whatsappUrl = artist ? `https://wa.me/${artist.phone}?text=${whatsappMessage}` : '#';
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -83,16 +71,16 @@ export default async function ArtworkDetailPage({ params }: Props) {
             />
           </div>
           <div>
-            {artwork.status === 'sold' && (
-              <Badge variant="destructive" className="mb-2">Sold</Badge>
+            {artwork.status !== 'available' && (
+              <Badge variant="destructive" className="mb-2 capitalize">{artwork.status}</Badge>
             )}
             <h1 className="font-headline text-4xl lg:text-5xl font-bold">{artwork.title}</h1>
             <p className="text-xl text-muted-foreground mt-2">
-              by <Link href={`/artists/${artist?.slug}`} className="hover:text-primary transition-colors">{artwork.artist_name}</Link>
+              by <Link href={`/artists/${artist?.slug}`} className="hover:text-primary transition-colors">{artist?.name}</Link>
             </p>
             <p className="text-3xl font-semibold my-6">BWP {artwork.price.toLocaleString()}</p>
             
-            <Button asChild size="lg" disabled={artwork.status === 'sold'} className="w-full sm:w-auto">
+            <Button asChild size="lg" disabled={artwork.status !== 'available' || !artist} className="w-full sm:w-auto">
               <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
                 <WhatsAppIcon className="mr-2 h-5 w-5" />
                 Contact Artist on WhatsApp
@@ -108,7 +96,7 @@ export default async function ArtworkDetailPage({ params }: Props) {
                 <h2 className="font-headline text-2xl font-semibold">Details</h2>
                 <ul className="text-muted-foreground list-none space-y-1">
                     <li><strong>Category:</strong> {artwork.category}</li>
-                    <li><strong>Status:</strong> <span className={artwork.status === 'available' ? 'text-green-600' : 'text-red-600'}>{artwork.status}</span></li>
+                    <li><strong>Status:</strong> <span className={`capitalize ${artwork.status === 'available' ? 'text-green-600' : 'text-red-600'}`}>{artwork.status}</span></li>
                 </ul>
             </div>
           </div>
@@ -147,12 +135,4 @@ export default async function ArtworkDetailPage({ params }: Props) {
       <Footer />
     </div>
   );
-}
-
-// This needs to be in a separate file to be mocked easily, but for this context it's here
-// This is because the original `data.ts` only allows getting artist by slug.
-async function getArtistById(id: string) {
-    const { getArtists } = await import('@/lib/data');
-    const artists = await getArtists();
-    return artists.find(a => a.id === id);
 }

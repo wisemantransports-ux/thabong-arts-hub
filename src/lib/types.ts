@@ -1,46 +1,11 @@
-export interface Artist {
-  id: string;
-  name: string;
-  slug: string;
-  bio: string;
-  profile_image: string;
-  phone: string;
-  email: string;
-  created_at: string;
-}
+import { Database } from "./types/supabase";
 
-export interface Artwork {
-  id: string;
-  artist_id: string;
-  artist_name: string;
-  artist_phone: string;
-  title: string;
-  description: string;
-  price: number;
-  image_url: string;
-  category: string;
-  status: 'available' | 'sold';
-  created_at: string;
-}
+export type Artist = Database['public']['Tables']['artists']['Row'];
+export type Artwork = Database['public']['Tables']['artworks']['Row'];
+export type Event = Database['public']['Tables']['events']['Row'];
+export type Business = Database['public']['Tables']['businesses']['Row'];
 
-export interface Event {
-  id: string;
-  title: string;
-  description: string;
-  event_date: string;
-  location: string;
-  image_url: string;
-  created_at: string;
-}
-
-export interface Business {
-  id: string;
-  name: string;
-  slug: string;
-  description: string;
-  phone: string;
-  whatsapp: string;
-  image_url: string;
-  opening_hours: string;
-  created_at: string;
-}
+// Custom type for joining artworks with artist details
+export type ArtworkWithArtist = Artwork & {
+  artists: Pick<Artist, 'name' | 'slug' | 'phone' | 'profile_image' | 'bio'> | null;
+};

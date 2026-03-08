@@ -1,6 +1,5 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 
 import { getArtistBySlug, getArtworks } from '@/lib/data';
@@ -10,8 +9,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { WhatsAppIcon } from '@/components/icons/whatsapp-icon';
-import { generateArtworkSeoMetadata } from '@/ai/flows/generate-artwork-seo-metadata-flow';
-
 
 type Props = {
   params: { slug: string };
@@ -19,23 +16,6 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const artist = await getArtistBySlug(params.slug);
-
-  if (!artist) {
-    return {
-      title: 'Artist Not Found',
-    };
-  }
-
-  // Use a sample artwork for SEO generation if available
-  const artworks = await getArtworks({ artist_id: artist.id });
-  const sampleArtwork = artworks[0];
-
-  const seoData = await generateArtworkSeoMetadata({
-    artworkTitle: sampleArtwork ? `${sampleArtwork.title} by ${artist.name}` : `Art by ${artist.name}`,
-    artworkDescription: artist.bio,
-    artistName: artist.name,
-    artworkCategory: 'Various',
-  });
 
   return {
     title: `Original African Art – Botswana Artist ${artist.name}`,
@@ -58,9 +38,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ArtistProfilePage({ params }: Props) {
   const artist = await getArtistBySlug(params.slug);
-  if (!artist) {
-    notFound();
-  }
   const artworks = await getArtworks({ artist_id: artist.id });
 
   const whatsappMessage = encodeURIComponent(
@@ -113,8 +90,8 @@ export default async function ArtistProfilePage({ params }: Props) {
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                         data-ai-hint="artwork painting"
                       />
-                      {artwork.status === 'sold' && (
-                        <Badge variant="destructive" className="absolute top-2 right-2">Sold</Badge>
+                      {artwork.status !== 'available' && (
+                        <Badge variant="destructive" className="absolute top-2 right-2 capitalize">{artwork.status}</Badge>
                       )}
                     </div>
                     <div className="p-4 flex flex-col flex-grow">

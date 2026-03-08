@@ -1,29 +1,58 @@
-import { NextResponse, type NextRequest } from 'next/server';
-
-// This is a mock authentication check.
-// In a real Supabase app, you would use `createMiddlewareClient` from `@supabase/ssr`
-// to check for a valid session.
-async function isAuthenticated(request: NextRequest): Promise<boolean> {
-  // For this demo, we'll allow access if a specific cookie is set,
-  // which we could imagine our login flow would do.
-  // We are not implementing the full auth flow here, so we will just return false
-  // and rely on the login page's mock success to redirect.
-  // To test the dashboard, change this to `return true;`
-  return true; 
-}
+import { NextResponse, type NextRequest } from 'next/server'
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
 
 export async function middleware(request: NextRequest) {
-  const isAuth = await isAuthenticated(request);
-  const isDashboardRoute = request.nextUrl.pathname.startsWith('/dashboard');
-  
-  if (isDashboardRoute && !isAuth) {
-    // Redirect unauthenticated users trying to access dashboard routes to the login page.
-    const loginUrl = new URL('/login', request.url);
-    loginUrl.searchParams.set('redirectedFrom', request.nextUrl.pathname);
-    return NextResponse.redirect(loginUrl);
+  let response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  })
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return request.cookies.get(name)?.value
+        },
+        set(name: string, value: string, options: CookieOptions) {
+          request.cookies.set({ name, value, ...options })
+          response = NextResponse.next({
+            request: {
+              headers: request.headers,
+            },
+          })
+          response.cookies.set({ name, value, ...options })
+        },
+        remove(name: string, options: CookieOptions) {
+          request.cookies.set({ name, value: '', ...options })
+          response = NextResponse.next({
+            request: {
+              headers: request.headers,
+            },
+          })
+          response.cookies.set({ name, value: '', ...options })
+        },
+      },
+    }
+  )
+
+  const { data: { session } } = await supabase.auth.getSession()
+
+  const { pathname } = request.nextUrl
+  const isAuthRoute = pathname.startsWith('/login') || pathname.startsWith('/signup')
+  const isDashboardRoute = pathname.startsWith('/dashboard') || pathname.startsWith('/admin')
+
+  if (!session && isDashboardRoute) {
+    return NextResponse.redirect(new URL('/login', request.url))
   }
-  
-  return NextResponse.next();
+
+  if (session && isAuthRoute) {
+    return NextResponse.redirect(new URL('/dashboard', request.url))
+  }
+
+  return response
 }
 
 export const config = {
@@ -37,4 +66,4 @@ export const config = {
      */
     '/((?!_next/static|_next/image|favicon.ico|images).*)',
   ],
-};
+}

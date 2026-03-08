@@ -4,13 +4,19 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Palette, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { login } from '../auth/actions';
+import { signup } from '../auth/actions';
 
-export default function LoginPage() {
+export default function SignupPage() {
   const searchParams = useSearchParams();
   const message = searchParams.get('message');
 
@@ -21,19 +27,21 @@ export default function LoginPage() {
           <Link href="/" className="inline-block mb-4">
             <Palette className="h-10 w-10 text-primary mx-auto" />
           </Link>
-          <CardTitle className="text-2xl font-headline">Artist Login</CardTitle>
-          <CardDescription>Enter your credentials to access your dashboard.</CardDescription>
+          <CardTitle className="text-2xl font-headline">Create an Artist Account</CardTitle>
+          <CardDescription>
+            Join our community of talented artists.
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <form action={login} className="grid gap-4">
+          <form action={signup} className="grid gap-4">
             {message && (
-              <Alert variant="destructive">
+              <Alert variant={message.includes("Check your email") ? "default" : "destructive"}>
                 <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Login Failed</AlertTitle>
+                <AlertTitle>{message.includes("Check your email") ? "Success" : "Signup Failed"}</AlertTitle>
                 <AlertDescription>{message}</AlertDescription>
               </Alert>
             )}
-            <div className="grid gap-2">
+             <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
@@ -44,27 +52,23 @@ export default function LoginPage() {
               />
             </div>
             <div className="grid gap-2">
-              <div className="flex items-center">
-                <Label htmlFor="password">Password</Label>
-                <Link href="#" className="ml-auto inline-block text-sm underline">
-                  Forgot your password?
-                </Link>
-              </div>
+              <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
                 name="password"
                 type="password"
                 required
+                minLength={6}
               />
             </div>
             <Button type="submit" className="w-full">
-              Login
+              Sign Up
             </Button>
           </form>
           <div className="mt-4 text-center text-sm">
-            Don't have an account?{' '}
-            <Link href="/signup" className="underline">
-              Sign up
+            Already have an account?{' '}
+            <Link href="/login" className="underline">
+              Login
             </Link>
           </div>
         </CardContent>

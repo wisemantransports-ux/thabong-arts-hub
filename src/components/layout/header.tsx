@@ -2,12 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X, Palette, Shield } from 'lucide-react';
-import { useState } from 'react';
+import { Menu, Palette, Shield } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Session } from '@supabase/supabase-js';
 
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
+import { createClient } from '@/lib/supabase/client';
 
 const navLinks = [
   { href: '/artworks', label: 'Artworks' },
@@ -21,13 +23,31 @@ const navLinks = [
 export default function Header() {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [session, setSession] = useState<Session | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
   const isDashboard = pathname.startsWith('/dashboard') || pathname.startsWith('/admin');
+  
+  useEffect(() => {
+    const supabase = createClient();
+    const getSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      setSession(data.session);
+      setIsLoading(false);
+    };
+    getSession();
 
-  // In a real app, you'd get this from your auth context
-  const [isAuthenticated, setIsAuthenticated] = useState(true);
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      setSession(session);
+    });
 
-  if (isDashboard) {
-    return null; // Don't show the main header on dashboard pages
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
+
+  if (isDashboard || isLoading) {
+    return null; // Don't show the main header on dashboard pages or while loading
   }
 
   return (
@@ -54,11 +74,12 @@ export default function Header() {
           ))}
         </nav>
         <div className="flex flex-1 items-center justify-end gap-2">
-          {isAuthenticated ? (
+          {session ? (
             <>
               <Button asChild>
                 <Link href="/dashboard">Artist Dashboard</Link>
               </Button>
+              {/* This is a simplified check. In a real app, you'd use roles from JWT */}
               <Button variant="outline" asChild>
                 <Link href="/admin">
                     <Shield className="mr-2 h-4 w-4" />
@@ -72,7 +93,7 @@ export default function Header() {
                 <Link href="/login">Artist Login</Link>
               </Button>
               <Button asChild>
-                <Link href="/contact">Artist Sign Up</Link>
+                <Link href="/signup">Artist Sign Up</Link>
               </Button>
             </>
           )}
@@ -107,14 +128,17 @@ export default function Header() {
                   ))}
                 </nav>
                 <div className="mt-auto flex flex-col gap-4 pt-8">
-                  {isAuthenticated ? (
+                  {session ? (
                     <>
                     <Button asChild size="lg">
                       <Link href="/dashboard" onClick={() => setIsMobileMenuOpen(false)}>Artist Dashboard</Link>
                     </Button>
-                    <Button asChild size="lg" variant="outline">
+                     <Button asChild size="lg" variant="outline">
                       <Link href="/admin" onClick={() => setIsMobileMenuOpen(false)}>Admin Dashboard</Link>
                     </Button>
+                     <form action="/auth/sign-out" method="post">
+                        <Button type="submit" variant="ghost" className="w-full justify-start text-lg font-medium text-muted-foreground">Logout</Button>
+                    </form>
                     </>
                   ) : (
                     <>
@@ -122,7 +146,7 @@ export default function Header() {
                         <Link href="/login" onClick={() => setIsMobileMenuOpen(false)}>Artist Login</Link>
                       </Button>
                       <Button asChild size="lg">
-                        <Link href="/contact" onClick={() => setIsMobileMenuOpen(false)}>Artist Sign Up</Link>
+                        <Link href="/signup" onClick={() => setIsMobileMenuOpen(false)}>Artist Sign Up</Link>
                       </Button>
                     </>
                   )}
