@@ -25,16 +25,21 @@ export default async function MyArtworksPage() {
     .eq('user_id', session.user.id)
     .single();
 
-  // If artist profile doesn't exist, show a helpful message and prompt to create one.
-  if (artistError || !artist) {
+  // If artist profile doesn't exist or is incomplete, redirect them to create it.
+  if (artistError || !artist || !artist.name) {
     return (
       <Card>
         <CardHeader>
           <CardTitle>My Artworks</CardTitle>
           <CardDescription>
-            We couldn't find an artist profile associated with your account. Please complete your profile first.
+            We couldn't find a complete artist profile for your account. Please complete your profile before adding artworks.
           </CardDescription>
         </CardHeader>
+        <CardContent>
+            <Button asChild>
+                <a href="/dashboard/edit-profile">Complete Profile</a>
+            </Button>
+        </CardContent>
       </Card>
     );
   }
@@ -49,7 +54,7 @@ export default async function MyArtworksPage() {
           <CardTitle>My Artworks</CardTitle>
           <CardDescription>A list of all your artworks on the platform.</CardDescription>
         </div>
-        {/* Pass artist name to the client component */}
+        {/* Pass artist name to the client component for the AI description generator */}
         <AddArtworkSheet artistName={artist.name}>
           <Button>
             <PlusCircle className="mr-2 h-4 w-4" />

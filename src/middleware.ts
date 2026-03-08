@@ -8,6 +8,8 @@ export async function middleware(request: NextRequest) {
     },
   })
 
+  // Create a Supabase client that can read and write cookies for the server.
+  // This is used to refresh the session and perform server-side checks.
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -17,12 +19,16 @@ export async function middleware(request: NextRequest) {
           return request.cookies.get(name)?.value
         },
         set(name: string, value: string, options: CookieOptions) {
-          // If the cookie is updated, update the cookies for the request and response
+          // The `set` method was called from a Server Component.
+          // This can be ignored if you have middleware refreshing
+          // user sessions.
           request.cookies.set({ name, value, ...options })
           response.cookies.set({ name, value, ...options })
         },
         remove(name: string, options: CookieOptions) {
-          // If the cookie is removed, update the cookies for the request and response
+          // The `delete` method was called from a Server Component.
+          // This can be ignored if you have middleware refreshing
+          // user sessions.
           request.cookies.set({ name, value: '', ...options })
           response.cookies.set({ name, value: '', ...options })
         },
@@ -30,24 +36,24 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // This is the crucial step to refresh the session on every request.
-  // It ensures the session is available for all server-side checks.
-  await supabase.auth.getSession()
-
+  // Refresh session if expired - this will refresh the token and update the cookie.
   const { data: { session } } = await supabase.auth.getSession()
 
   const { pathname } = request.nextUrl
   const isAuthRoute = pathname.startsWith('/login') || pathname.startsWith('/signup')
   const isDashboardRoute = pathname.startsWith('/dashboard') || pathname.startsWith('/admin')
 
+  // If the user is not logged in and is trying to access a protected dashboard route, redirect to login.
   if (!session && isDashboardRoute) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
+  // If the user is logged in and is trying to access the login or signup page, redirect to the dashboard.
   if (session && isAuthRoute) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
+  // Return the original response with any updated cookies.
   return response
 }
 

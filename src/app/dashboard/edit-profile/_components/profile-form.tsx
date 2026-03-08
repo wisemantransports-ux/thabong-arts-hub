@@ -1,9 +1,7 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useEffect, useState, ChangeEvent } from 'react';
 import { useFormStatus } from 'react-dom';
-import { useState, useEffect, ChangeEvent } from 'react';
-
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -33,6 +31,7 @@ export default function ProfileForm({ artist }: { artist: Artist }) {
   const { toast } = useToast();
   const [imagePreview, setImagePreview] = useState<string | null>(artist.profile_image);
 
+  // ✅ Use the React.useActionState hook to manage form state with server actions
   const initialState = { message: '', type: 'idle' as const };
   const [state, dispatch] = useActionState(updateProfile, initialState);
 
@@ -66,7 +65,9 @@ export default function ProfileForm({ artist }: { artist: Artist }) {
     <Card>
       <CardHeader>
         <CardTitle>Edit Profile</CardTitle>
-        <CardDescription>Update your public artist information here. This will be visible on your profile page.</CardDescription>
+        <CardDescription>
+          {artist.name ? 'Update your public artist information here.' : 'Welcome! Please complete your profile to get started.'}
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <form action={dispatch} className="space-y-8">

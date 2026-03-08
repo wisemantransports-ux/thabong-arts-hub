@@ -42,6 +42,7 @@ export default function AddArtworkSheet({ children, artistName }: { children: Re
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
   
+  // ✅ Use the React.useActionState hook to manage form state with server actions
   const initialState = { message: '', type: 'idle' as const };
   const [state, dispatch] = useActionState(addArtwork, initialState);
   
@@ -52,6 +53,8 @@ export default function AddArtworkSheet({ children, artistName }: { children: Re
     if (state.type === 'success') {
       toast({ title: "Success", description: state.message });
       setIsOpen(false);
+      // Reset form fields visually if needed, though a page reload will handle this
+      setDescription('');
     } else if (state.type === 'error') {
       toast({ variant: 'destructive', title: "Error", description: state.message });
     }

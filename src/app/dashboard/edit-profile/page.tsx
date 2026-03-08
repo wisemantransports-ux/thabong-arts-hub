@@ -10,20 +10,22 @@ export const metadata = {
 };
 
 export default async function EditProfilePage() {
+  // ✅ Use the server client for secure session and data fetching.
   const supabase = createServerSupabaseClient();
 
-  // ✅ Server-side session check
+  // ✅ Get the user session.
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) redirect('/login');
 
-  // ✅ Fetch logged-in artist profile using the user's ID
+  // ✅ Fetch the artist profile linked to the logged-in user.
   const { data: artist, error } = await supabase
     .from('artists')
     .select('*')
     .eq('user_id', session.user.id)
     .single();
 
-  // If there's a major error (but not "no rows found", which is expected for new users), show an error page.
+  // Handle database errors, but ignore the "PGRST116" error, which just means
+  // no row was found. This is expected for new users.
   if (error && error.code !== 'PGRST116') {
     return (
       <Card>
@@ -38,8 +40,9 @@ export default async function EditProfilePage() {
     );
   }
 
-  // If the artist profile doesn't exist yet (new signup), we still render the form
-  // with a partial artist object. The form submission will use an 'upsert' to create the profile.
+  // ✅ If the artist profile doesn't exist (new signup), create a default object.
+  // The ProfileForm will use this to render the form for the first time.
+  // The form's server action will then 'upsert' this data to create the profile.
   const artistData = artist || {
     id: '', // No ID yet for a new profile
     user_id: session.user.id,
