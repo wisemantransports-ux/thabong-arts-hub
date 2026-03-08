@@ -1,7 +1,6 @@
 'use client';
 
 import { createClient } from '@/lib/supabase/client';
-import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import ProfileForm from './_components/profile-form';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -9,7 +8,6 @@ import { Artist } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function MyProfilePage() {
-    const router = useRouter();
     const [artist, setArtist] = useState<Artist | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -17,28 +15,29 @@ export default function MyProfilePage() {
         const supabase = createClient();
         const getArtist = async () => {
             const { data: { user } } = await supabase.auth.getUser();
-            if (!user) {
-                router.push('/login');
-                return;
-            }
 
-            const { data: artistData, error } = await supabase
-                .from('artists')
-                .select('*')
-                .eq('user_id', user.id)
-                .single();
-            
-            if (error && error.code !== 'PGRST116') {
-                console.error('Error fetching artist profile:', error.message);
+            // The middleware protects this route. We can assume a user session exists.
+            // We just need to wait for the user object to be available on the client.
+            if (user) {
+                const { data: artistData, error } = await supabase
+                    .from('artists')
+                    .select('*')
+                    .eq('user_id', user.id)
+                    .single();
+                
+                if (error && error.code !== 'PGRST116') {
+                    console.error('Error fetching artist profile:', error.message);
+                }
+                
+                if (artistData) {
+                    setArtist(artistData);
+                }
             }
-            
-            if (artistData) {
-                setArtist(artistData);
-            }
+            // Set loading to false after the attempt, so we don't get stuck in a loading state.
             setLoading(false);
         };
         getArtist();
-    }, [router]);
+    }, []);
     
     if (loading) {
         return (
@@ -87,7 +86,8 @@ export default function MyProfilePage() {
                     <CardTitle>Profile Not Found</CardTitle>
                     <CardDescription>
                         We couldn't find an artist profile associated with your account. 
-                        Please contact support if you believe this is an error.
+                        This can sometimes happen if the profile is still being created. Please wait a moment and refresh the page.
+                        If the problem persists, please contact support.
                     </CardDescription>
                 </CardHeader>
             </Card>
