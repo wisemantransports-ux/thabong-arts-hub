@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 
 import { getArtistBySlug, getArtworks } from '@/lib/data';
 import Header from '@/components/layout/header';
@@ -16,6 +17,12 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const artist = await getArtistBySlug(params.slug);
+
+  if (!artist) {
+    return {
+      title: 'Artist Not Found',
+    }
+  }
 
   return {
     title: `Original African Art – Botswana Artist ${artist.name}`,
@@ -38,6 +45,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ArtistProfilePage({ params }: Props) {
   const artist = await getArtistBySlug(params.slug);
+  
+  if (!artist) {
+    notFound();
+  }
+
   const artworks = await getArtworks({ artist_id: artist.id });
 
   const whatsappMessage = encodeURIComponent(

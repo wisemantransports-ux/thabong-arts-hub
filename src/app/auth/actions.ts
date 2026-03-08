@@ -3,16 +3,8 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { isSupabaseConfigured } from '@/lib/config'
-import { cookies } from 'next/headers'
 
 export async function login(formData: FormData) {
-  if (!isSupabaseConfigured) {
-    cookies().set('mock_session', 'true', { path: '/', httpOnly: true });
-    revalidatePath('/', 'layout');
-    return redirect('/dashboard');
-  }
-
   const supabase = createClient()
   const email = formData.get('email') as string
   const password = formData.get('password') as string
@@ -28,10 +20,6 @@ export async function login(formData: FormData) {
 }
 
 export async function signup(formData: FormData) {
-  if (!isSupabaseConfigured) {
-    return redirect('/login?message=Mock signup successful. Please log in.');
-  }
-
   const supabase = createClient()
   const email = formData.get('email') as string
   const password = formData.get('password') as string
@@ -54,5 +42,6 @@ export async function signup(formData: FormData) {
 export async function signOut() {
   const supabase = createClient()
   await supabase.auth.signOut()
+  revalidatePath('/', 'layout');
   return redirect('/')
 }

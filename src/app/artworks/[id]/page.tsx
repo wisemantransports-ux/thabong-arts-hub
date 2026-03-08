@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 
 import { getArtworkById } from '@/lib/data';
 import { Button } from '@/components/ui/button';
@@ -17,6 +18,12 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const artwork = await getArtworkById(params.id);
+
+  if (!artwork) {
+      return {
+          title: 'Artwork Not Found'
+      }
+  }
 
   const seoData = await generateArtworkSeoMetadata({
     artworkTitle: artwork.title,
@@ -47,6 +54,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ArtworkDetailPage({ params }: Props) {
   const artwork = await getArtworkById(params.id);
+  
+  if (!artwork) {
+      notFound();
+  }
+
   const artist = artwork.artists;
 
   const whatsappMessage = encodeURIComponent(

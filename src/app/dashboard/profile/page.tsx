@@ -11,10 +11,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { getArtistBySlug } from '@/lib/data';
 import { useEffect, useState } from 'react';
 import { Artist } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { createClient } from '@/lib/supabase/client';
 
 
 const profileSchema = z.object({
@@ -37,24 +37,41 @@ export default function MyProfilePage() {
     });
 
     useEffect(() => {
+        const supabase = createClient();
         async function fetchArtist() {
-            // In a real app, you would fetch the currently logged-in user.
-            const fetchedArtist = await getArtistBySlug('mary-molefe');
-            if (fetchedArtist) {
-                setArtist(fetchedArtist);
-                form.reset({
-                    name: fetchedArtist.name,
-                    email: fetchedArtist.email,
-                    phone: fetchedArtist.phone,
-                    bio: fetchedArtist.bio,
-                });
+            const { data: { user } } = await supabase.auth.getUser();
+
+            if (user) {
+                const { data: artistProfile, error } = await supabase
+                    .from('artists')
+                    .select('*')
+                    .eq('user_id', user.id)
+                    .single();
+
+                if (error) {
+                    console.error('Error fetching artist profile:', error.message);
+                    toast({
+                        variant: 'destructive',
+                        title: 'Error',
+                        description: 'Could not fetch your profile.',
+                    });
+                } else if (artistProfile) {
+                    setArtist(artistProfile);
+                    form.reset({
+                        name: artistProfile.name,
+                        email: artistProfile.email,
+                        phone: artistProfile.phone,
+                        bio: artistProfile.bio,
+                    });
+                }
             }
             setIsLoading(false);
         }
         fetchArtist();
-    }, [form]);
+    }, [form, toast]);
 
     const onSubmit = (data: ProfileFormValues) => {
+        // In a real app, this would call supabase.from('artists').update(...)
         console.log("Updating profile:", data);
         toast({
             title: "Profile Updated",
@@ -77,7 +94,7 @@ export default function MyProfilePage() {
     }
 
     if (!artist) {
-        return <div>Could not load artist profile.</div>
+        return <Card><CardHeader><CardTitle>Profile Not Found</CardTitle><CardDescription>We couldn't find an artist profile associated with your account.</CardDescription></CardHeader></Card>
     }
 
     return (
@@ -113,7 +130,7 @@ export default function MyProfilePage() {
                                 <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                             )} />
                             <FormField control={form.control} name="email" render={({ field }) => (
-                                <FormItem><FormLabel>Email Address</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>
+                                <FormItem><FormLabel>Email Address</FormLabel><FormControl><Input type="email" {...field} readOnly disabled /></FormControl><FormMessage /></FormItem>
                             )} />
                         </div>
                          <FormField control={form.control} name="phone" render={({ field }) => (

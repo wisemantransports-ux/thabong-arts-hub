@@ -1,111 +1,48 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { Artwork, Artist, Event, Business, ArtworkWithArtist } from './types';
-import { notFound } from 'next/navigation';
-import { mockArtists, mockArtworks, mockEvents, mockBusinesses } from './mock-data';
-import { isSupabaseConfigured } from './config';
-
-// Helper to apply filters to mock artworks
-const getMockArtworks = (filters: { artist_id?: string; limit?: number } = {}) => {
-  let filteredArtworks = mockArtworks;
-  if (filters.artist_id) {
-    filteredArtworks = filteredArtworks.filter(a => a.artist_id === filters.artist_id);
-  }
-  if (filters.limit) {
-    return filteredArtworks.slice(0, filters.limit);
-  }
-  return filteredArtworks;
-}
-
-// Helper to apply filters to mock events
-const getMockEvents = (filters: { limit?: number, past?: boolean } = {}) => {
-  // Mock data doesn't distinguish past/future well, so just apply limit
-  let events = mockEvents;
-  if (filters.limit) {
-    return events.slice(0, filters.limit);
-  }
-  return events;
-}
-
-// Helper to apply filters to mock businesses
-const getMockBusinesses = (filters: { limit?: number } = {}) => {
-  let businesses = mockBusinesses;
-  if (filters.limit) {
-    return businesses.slice(0, filters.limit);
-  }
-  return businesses;
-}
-
 
 // ARTISTS
 export async function getArtists(): Promise<Artist[]> {
-  if (!isSupabaseConfigured) {
-    return mockArtists;
-  }
   try {
     const supabase = createClient();
     const { data, error } = await supabase.from('artists').select('*');
     if (error) throw error;
-    return data;
+    return data || [];
   } catch (error) {
-    console.warn('Could not fetch artists from Supabase, falling back to mock data. Error:', (error as Error).message);
-    return mockArtists;
+    console.warn('Warning: Error fetching artists. Returning empty array.', (error as Error).message);
+    return [];
   }
 }
 
-export async function getArtistBySlug(slug: string): Promise<Artist> {
-  if (!isSupabaseConfigured) {
-    const artist = mockArtists.find(a => a.slug === slug);
-    if (!artist) notFound();
-    return artist;
-  }
+export async function getArtistBySlug(slug: string): Promise<Artist | null> {
   try {
     const supabase = createClient();
     const { data, error } = await supabase.from('artists').select('*').eq('slug', slug).single();
-    if (error || !data) {
-      console.warn(`Error fetching artist with slug ${slug}, falling back to mock data:`, error?.message);
-      const mockArtist = mockArtists.find(a => a.slug === slug);
-      if (!mockArtist) notFound();
-      return mockArtist;
+    if (error && error.code !== 'PGRST116') { // PGRST116: "exact one row expected, but found no rows" - this is not an error for us.
+        throw error;
     }
     return data;
   } catch (error) {
-    console.warn(`Could not fetch artist ${slug} from Supabase, falling back to mock data. Error:`, (error as Error).message);
-    const artist = mockArtists.find(a => a.slug === slug);
-    if (!artist) notFound();
-    return artist;
+    console.warn(`Warning: Error fetching artist with slug ${slug}. Returning null.`, (error as Error).message);
+    return null;
   }
 }
 
-export async function getArtistById(id: string): Promise<Artist> {
-  if (!isSupabaseConfigured) {
-    const artist = mockArtists.find(a => a.id === id);
-    if (!artist) notFound();
-    return artist;
-  }
+export async function getArtistById(id: string): Promise<Artist | null> {
   try {
     const supabase = createClient();
     const { data, error } = await supabase.from('artists').select('*').eq('id', id).single();
-    if (error || !data) {
-      console.warn(`Error fetching artist with id ${id}, falling back to mock data:`, error?.message);
-      const mockArtist = mockArtists.find(a => a.id === id);
-      if (!mockArtist) notFound();
-      return mockArtist;
-    }
+    if (error && error.code !== 'PGRST116') throw error;
     return data;
   } catch (error) {
-    console.warn(`Could not fetch artist ${id} from Supabase, falling back to mock data. Error:`, (error as Error).message);
-    const artist = mockArtists.find(a => a.id === id);
-    if (!artist) notFound();
-    return artist;
+    console.warn(`Warning: Error fetching artist with id ${id}. Returning null.`, (error as Error).message);
+    return null;
   }
 }
 
 // ARTWORKS
 export async function getArtworks(filters: { artist_id?: string; limit?: number } = {}): Promise<ArtworkWithArtist[]> {
-  if (!isSupabaseConfigured) {
-    return getMockArtworks(filters);
-  }
   try {
     const supabase = createClient();
     let query = supabase
@@ -122,23 +59,15 @@ export async function getArtworks(filters: { artist_id?: string; limit?: number 
     }
 
     const { data, error } = await query;
-
-    if (error) {
-      throw error;
-    }
-    return data as ArtworkWithArtist[];
-  } catch(error) {
-    console.warn('Could not fetch artworks from Supabase, falling back to mock data:', (error as Error).message);
-    return getMockArtworks(filters);
+    if (error) throw error;
+    return (data as ArtworkWithArtist[]) || [];
+  } catch (error) {
+    console.warn('Warning: Error fetching artworks. Returning empty array.', (error as Error).message);
+    return [];
   }
 }
 
-export async function getArtworkById(id: string): Promise<ArtworkWithArtist> {
-  if (!isSupabaseConfigured) {
-    const artwork = mockArtworks.find(a => a.id === id);
-    if (!artwork) notFound();
-    return artwork;
-  }
+export async function getArtworkById(id: string): Promise<ArtworkWithArtist | null> {
   try {
     const supabase = createClient();
     const { data, error } = await supabase
@@ -147,26 +76,16 @@ export async function getArtworkById(id: string): Promise<ArtworkWithArtist> {
       .eq('id', id)
       .single();
 
-    if (error || !data) {
-      console.warn(`Error fetching artwork with id ${id}, falling back to mock data:`, error?.message);
-      const mockArtwork = mockArtworks.find(a => a.id === id);
-      if (!mockArtwork) notFound();
-      return mockArtwork;
-    }
+    if (error && error.code !== 'PGRST116') throw error;
     return data as ArtworkWithArtist;
   } catch (error) {
-    console.warn(`Could not fetch artwork ${id} from Supabase, falling back to mock data. Error:`, (error as Error).message);
-    const artwork = mockArtworks.find(a => a.id === id);
-    if (!artwork) notFound();
-    return artwork;
+    console.warn(`Warning: Error fetching artwork with id ${id}. Returning null.`, (error as Error).message);
+    return null;
   }
 }
 
 // EVENTS
 export async function getEvents(filters: { limit?: number, past?: boolean } = {}): Promise<Event[]> {
-  if (!isSupabaseConfigured) {
-    return getMockEvents(filters);
-  }
   try {
     const supabase = createClient();
     let query = supabase
@@ -180,55 +99,39 @@ export async function getEvents(filters: { limit?: number, past?: boolean } = {}
 
     const { data, error } = await query;
     if (error) throw error;
-    return data;
-  } catch(error) {
-    console.warn('Could not fetch events from Supabase, falling back to mock data:', (error as Error).message);
-    return getMockEvents(filters);
+    return data || [];
+  } catch (error) {
+    console.warn('Warning: Error fetching events. Returning empty array.', (error as Error).message);
+    return [];
   }
 }
 
 // BUSINESSES
 export async function getBusinesses(filters: { limit?: number } = {}): Promise<Business[]> {
-    if (!isSupabaseConfigured) {
-      return getMockBusinesses(filters);
-    }
-    try {
-      const supabase = createClient();
-      let query = supabase.from('businesses').select('*');
+  try {
+    const supabase = createClient();
+    let query = supabase.from('businesses').select('*');
 
-      if(filters.limit){
-          query = query.limit(filters.limit);
-      }
-      const { data, error } = await query;
-
-      if (error) throw error;
-      return data;
-    } catch(error) {
-      console.warn('Could not fetch businesses from Supabase, falling back to mock data:', (error as Error).message);
-      return getMockBusinesses(filters);
+    if(filters.limit){
+        query = query.limit(filters.limit);
     }
+    const { data, error } = await query;
+    if (error) throw error;
+    return data || [];
+  } catch(error) {
+    console.warn('Warning: Error fetching businesses. Returning empty array.', (error as Error).message);
+    return [];
+  }
 }
 
-export async function getBusinessBySlug(slug: string): Promise<Business> {
-    if (!isSupabaseConfigured) {
-      const business = mockBusinesses.find(b => b.slug === slug);
-      if (!business) notFound();
-      return business;
-    }
-    try {
-      const supabase = createClient();
-      const { data, error } = await supabase.from('businesses').select('*').eq('slug', slug).single();
-      if (error || !data) {
-          console.warn(`Error fetching business with slug ${slug}, falling back to mock data:`, error?.message);
-          const mockBusiness = mockBusinesses.find(b => b.slug === slug);
-          if (!mockBusiness) notFound();
-          return mockBusiness;
-      }
-      return data;
-    } catch(error) {
-      console.warn(`Could not fetch business ${slug} from Supabase, falling back to mock data. Error:`, (error as Error).message);
-      const business = mockBusinesses.find(b => b.slug === slug);
-      if (!business) notFound();
-      return business;
-    }
+export async function getBusinessBySlug(slug: string): Promise<Business | null> {
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase.from('businesses').select('*').eq('slug', slug).single();
+    if (error && error.code !== 'PGRST116') throw error;
+    return data;
+  } catch (error) {
+    console.warn(`Warning: Error fetching business with slug ${slug}. Returning null.`, (error as Error).message);
+    return null;
+  }
 }
