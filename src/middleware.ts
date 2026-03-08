@@ -1,87 +1,56 @@
-import { NextResponse, type NextRequest } from 'next/server'
-import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { NextResponse, type NextRequest } from 'next/server';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
+import { cookies } from 'next/headers';
+import { Database } from './src/lib/types/supabase';
 
-export async function middleware(request: NextRequest) {
-  // This `response` object is used to pass through the request to the next
-  // middleware in the chain, or to the final page/route handler.
-  let response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
-  })
-
-  // Create a Supabase client that can read/write cookies.
-  // This is used to refresh the session token and manage authentication state.
-  const supabase = createServerClient(
+export async function middleware(req: NextRequest) {
+  const res = NextResponse.next();
+  const cookieStore = cookies();
+  const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
+    { 
       cookies: {
         get(name: string) {
-          return request.cookies.get(name)?.value
+          return cookieStore.get(name)?.value
         },
-        // The `set` method is called when the session is refreshed.
-        // It's crucial to update the cookies on both the request and response.
-        set(name: string, value: string, options: CookieOptions) {
-          // `request.cookies.set` is temporary and only for the current request.
-          request.cookies.set({ name, value, ...options })
-          // The new response object is created to carry the updated cookie to the browser.
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          })
-          // `response.cookies.set` sets the cookie for future requests.
-          response.cookies.set({ name, value, ...options })
-        },
-        // The `remove` method is called when the user signs out.
-        remove(name: string, options: CookieOptions) {
-          // `request.cookies.set` is temporary and only for the current request.
-          request.cookies.set({ name, value: '', ...options })
-          // The new response object is created to carry the updated cookie to the browser.
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          })
-           // `response.cookies.set` removes the cookie for future requests.
-          response.cookies.set({ name, value: '', ...options })
-        },
-      },
+        // This is a no-op because the cookieStore from 'next/headers' is read-only.
+        // This will prevent session refreshes from persisting.
+        set(name: string, value: string, options: CookieOptions) {},
+        remove(name: string, options: CookieOptions) {},
+      }
     }
-  )
+  );
 
-  // This is the crucial step that refreshes the session cookie if it's expired.
-  // It also makes the user object available for the rest of the request.
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  const { pathname } = request.nextUrl
-  const isAuthRoute = pathname.startsWith('/login') || pathname.startsWith('/signup')
-  const isDashboardRoute = pathname.startsWith('/dashboard') || pathname.startsWith('/admin')
+  const isDashboardRoute = req.nextUrl.pathname.startsWith('/dashboard');
 
-  // If the user is not logged in and is trying to access a protected dashboard route, redirect to login.
-  if (!session && isDashboardRoute) {
-    return NextResponse.redirect(new URL('/login', request.url))
+  // If no user session, and they are trying to access a dashboard route, redirect to login
+  if (!user && isDashboardRoute) {
+    const loginUrl = new URL('/login', req.url);
+    return NextResponse.redirect(loginUrl);
   }
 
-  // If the user is logged in and is trying to access the login or signup page, redirect to the dashboard.
-  if (session && isAuthRoute) {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
+  // If a user is logged in, check for incomplete artist profile
+  if (user && isDashboardRoute) {
+    const { data: artist } = await supabase
+      .from('artists')
+      .select('id, name')
+      .eq('user_id', user.id)
+      .single();
+
+    // If profile is incomplete and they are NOT on the edit profile page, redirect them.
+    if ((!artist || !artist.name) && req.nextUrl.pathname !== '/dashboard/edit-profile') {
+      const editProfileUrl = new URL('/dashboard/edit-profile', req.url);
+      return NextResponse.redirect(editProfileUrl);
+    }
   }
 
-  // Return the response object, which may have been updated with new cookies.
-  return response
+  return res;
 }
 
+// Apply middleware to these routes
 export const config = {
-  matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - images/ (our public images)
-     */
-    '/((?!_next/static|_next/image|favicon.ico|images).*)',
-  ],
-}
+  matcher: ['/dashboard/:path*', '/dashboard'],
+};
