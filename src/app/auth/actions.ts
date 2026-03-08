@@ -42,11 +42,10 @@ export async function signup(formData: FormData) {
   }
 
   // 2. Create the corresponding artist profile immediately.
-  // This is a critical step to ensure every user has an artist profile.
-  // Using `upsert` is robust. The RLS policies we set up will allow this operation.
+  // A simple INSERT is sufficient and more robust if the UNIQUE constraint on user_id is missing.
   const { error: profileError } = await supabase
     .from('artists')
-    .upsert({ 
+    .insert({ 
       user_id: signUpData.user.id, 
       email: signUpData.user.email,
       name: '', // Initially empty, user will be prompted to complete it
@@ -55,7 +54,7 @@ export async function signup(formData: FormData) {
       profile_image: `https://picsum.photos/seed/${signUpData.user.id}/400/400`,
       phone: '',
       role: 'artist' // Default role
-    }, { onConflict: 'user_id' });
+    });
     
   if (profileError) {
     // This is a critical failure. We should sign the user out and show an error.
