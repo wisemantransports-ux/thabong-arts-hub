@@ -11,40 +11,23 @@ import AddArtworkSheet from './_components/add-artwork-sheet';
 import { getArtworks } from '@/lib/data';
 
 export default async function MyArtworksPage() {
-  // ✅ Server-side Supabase client to securely get the session
   const supabase = createServerSupabaseClient();
 
-  // ✅ Get session from cookies
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) redirect('/login');
 
-  // ✅ Fetch logged-in artist profile using the user's ID
   const { data: artist, error: artistError } = await supabase
     .from('artists')
     .select('*')
     .eq('user_id', session.user.id)
     .single();
 
-  // If artist profile doesn't exist or is incomplete, redirect them to create it.
+  // If artist profile is missing or incomplete, redirect them to create it.
   if (artistError || !artist || !artist.name) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>My Artworks</CardTitle>
-          <CardDescription>
-            We couldn't find a complete artist profile for your account. Please complete your profile before adding artworks.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-            <Button asChild>
-                <a href="/dashboard/edit-profile">Complete Profile</a>
-            </Button>
-        </CardContent>
-      </Card>
-    );
+    redirect('/dashboard/edit-profile');
   }
 
-  // ✅ Fetch artworks scoped to the logged-in artist
+  // Fetch artworks scoped to the logged-in artist
   const artworks = await getArtworks({ artist_id: artist.id });
 
   return (
@@ -54,7 +37,6 @@ export default async function MyArtworksPage() {
           <CardTitle>My Artworks</CardTitle>
           <CardDescription>A list of all your artworks on the platform.</CardDescription>
         </div>
-        {/* Pass artist name to the client component for the AI description generator */}
         <AddArtworkSheet artistName={artist.name}>
           <Button>
             <PlusCircle className="mr-2 h-4 w-4" />
