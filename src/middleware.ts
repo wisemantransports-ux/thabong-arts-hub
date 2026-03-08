@@ -38,6 +38,8 @@ export async function middleware(request: NextRequest) {
     }
   )
 
+  // This is the crucial step to refresh the session on every request.
+  // It ensures the session is available for all server-side checks.
   const { data: { session } } = await supabase.auth.getSession()
 
   const { pathname } = request.nextUrl
