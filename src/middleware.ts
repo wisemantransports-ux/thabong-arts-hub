@@ -1,56 +1,68 @@
-import { NextResponse, type NextRequest } from 'next/server';
-import { createServerClient, type CookieOptions } from '@supabase/ssr';
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-import { Database } from './src/lib/types/supabase';
+import { Database } from './lib/types/supabase';
 
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next();
-  const cookieStore = cookies();
+
+  // === Detect if we are in Gemini Mock Mode ===
+  const isMock = process.env.GEMINI_MOCK === 'true';
+
+  // Allow public pages
+  const publicPaths = ['/login', '/signup', '/'];
+  if (publicPaths.some((path) => req.nextUrl.pathname.startsWith(path))) {
+    return res;
+  }
+  
+  if (isMock) {
+    // Mock user for development/demo
+    // In mock mode, we assume the user is authenticated and has a complete profile.
+    // This allows access to all dashboard routes without hitting Supabase.
+    return res;
+  }
+
+  // === Live Supabase ===
+  // This part runs only when not in mock mode.
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     { 
       cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-        // This is a no-op because the cookieStore from 'next/headers' is read-only.
-        // This will prevent session refreshes from persisting.
-        set(name: string, value: string, options: CookieOptions) {},
-        remove(name: string, options: CookieOptions) {},
+        get: (name) => req.cookies.get(name)?.value,
+        set: (name, value, options) => res.cookies.set(name, value, options),
+        remove: (name, options) => res.cookies.delete(name, options),
       }
     }
   );
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  const isDashboardRoute = req.nextUrl.pathname.startsWith('/dashboard');
-
-  // If no user session, and they are trying to access a dashboard route, redirect to login
-  if (!user && isDashboardRoute) {
+  // If no session, redirect to login for any protected route.
+  if (!user) {
     const loginUrl = new URL('/login', req.url);
+    loginUrl.searchParams.set('next', req.nextUrl.pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  // If a user is logged in, check for incomplete artist profile
-  if (user && isDashboardRoute) {
-    const { data: artist } = await supabase
-      .from('artists')
-      .select('id, name')
-      .eq('user_id', user.id)
-      .single();
+  // If user is logged in, check artist profile completion.
+  const { data: artist } = await supabase
+    .from('artists')
+    .select('id, name')
+    .eq('user_id', user.id)
+    .single();
 
-    // If profile is incomplete and they are NOT on the edit profile page, redirect them.
-    if ((!artist || !artist.name) && req.nextUrl.pathname !== '/dashboard/edit-profile') {
-      const editProfileUrl = new URL('/dashboard/edit-profile', req.url);
-      return NextResponse.redirect(editProfileUrl);
-    }
+  // If profile is incomplete, force redirect to edit profile page.
+  if ((!artist || !artist.name) && req.nextUrl.pathname !== '/dashboard/edit-profile') {
+    const editProfileUrl = new URL('/dashboard/edit-profile', req.url);
+    return NextResponse.redirect(editProfileUrl);
   }
 
   return res;
 }
 
-// Apply middleware to these routes
+// Apply middleware to all dashboard routes.
 export const config = {
-  matcher: ['/dashboard/:path*', '/dashboard'],
+  matcher: ['/dashboard/:path*'],
 };
