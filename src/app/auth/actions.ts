@@ -36,32 +36,39 @@ export async function signup(formData: FormData) {
     return redirect(`/signup?message=${signUpError.message}`)
   }
 
-  // After successful signup, create a corresponding artist profile.
   if (signUpData.user) {
+    // Immediately create a profile for the new user.
+    // Using upsert is robust: it will create the profile or do nothing if it already exists.
     const { error: profileError } = await supabase
       .from('artists')
-      .insert({ 
+      .upsert({ 
         user_id: signUpData.user.id, 
         email: signUpData.user.email || '',
-        name: '', // Initially empty, to be filled in by the user
+        name: '', // Initially empty, user will be forced to complete it
         slug: signUpData.user.id, // Placeholder slug, user should update
         bio: '', // Initially empty
         profile_image: `https://picsum.photos/seed/${signUpData.user.id}/400/400`, // Placeholder image
         phone: '', // Initially empty
-      });
+      }, { onConflict: 'user_id' });
       
     if (profileError) {
-      // If profile creation fails, we should ideally handle this, maybe by deleting the user
-      // or flagging the account. For now, we'll redirect with an error.
-      // Note: This could happen if RLS prevents the insert.
-      console.error('Failed to create artist profile:', profileError);
-      // We can't easily undo the signup, so we'll just log the user out and show an error.
-      await supabase.auth.signOut();
-      return redirect(`/signup?message=Could not create your artist profile. Please contact support. Error: ${profileError.message}`);
+      // Log the error, but don't block the user. The edit-profile page has its own
+      // upsert logic that can recover from this failure.
+      console.error('Failed to create artist profile during signup:', profileError);
     }
+  } else {
+    return redirect(`/signup?message=Could not create user account. Please try again.`);
   }
 
-  return redirect('/login?message=Check your email to continue the sign-in process')
+  // Check if the user object has identities. If not, it means email confirmation is required.
+  if (signUpData.user.identities && signUpData.user.identities.length === 0) {
+    return redirect('/login?message=Check your email to continue the sign-in process')
+  }
+  
+  // If email confirmation is NOT required, the user is already logged in.
+  // Redirect them to complete their profile.
+  revalidatePath('/', 'layout');
+  return redirect('/dashboard/edit-profile');
 }
 
 export async function signOut() {
