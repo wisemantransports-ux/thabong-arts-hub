@@ -45,6 +45,8 @@ export default function DashboardSidebar({
     router.push('/');
   };
 
+  const currentPage = navItems.slice().reverse().find(item => pathname.startsWith(item.href));
+
   return (
     <SidebarProvider>
       <Sidebar>
@@ -62,7 +64,7 @@ export default function DashboardSidebar({
               <SidebarMenuItem key={item.href}>
                 <SidebarMenuButton
                   asChild
-                  isActive={pathname === item.href}
+                  isActive={currentPage?.href === item.href}
                   tooltip={item.label}
                 >
                   <Link href={item.href}>
@@ -107,7 +109,7 @@ export default function DashboardSidebar({
         <header className="flex items-center justify-between p-4 border-b bg-background md:justify-end">
             <SidebarTrigger className="md:hidden" />
             <h1 className="text-xl font-semibold font-headline">
-              {navItems.find(item => item.href === pathname)?.label || 'Dashboard'}
+              {currentPage?.label || 'Dashboard'}
             </h1>
         </header>
         <main className="p-4 md:p-6">{children}</main>
