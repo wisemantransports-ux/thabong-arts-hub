@@ -32,7 +32,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/dashboard/artworks', icon: Paintbrush, label: 'My Artworks' },
-  { href: '/dashboard/profile', icon: User, label: 'My Profile' },
+  { href: '/dashboard/edit-profile', icon: User, label: 'Edit Profile' },
 ];
 
 export default function DashboardSidebar({

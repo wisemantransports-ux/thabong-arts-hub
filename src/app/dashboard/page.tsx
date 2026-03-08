@@ -99,7 +99,7 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent>
             <Button asChild>
-              <Link href="/dashboard/profile">
+              <Link href="/dashboard/edit-profile">
                 <User className="mr-2 h-4 w-4" /> Edit My Profile
               </Link>
             </Button>

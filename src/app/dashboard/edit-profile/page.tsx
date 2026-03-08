@@ -4,22 +4,42 @@ import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/ca
 import { redirect } from 'next/navigation';
 import { Artist } from '@/lib/types';
 
-export default async function MyProfilePage() {
+export const metadata = {
+  title: "Edit Profile | Artist Dashboard",
+  description: "Update your artist profile details.",
+};
+
+export default async function EditProfilePage() {
     const supabase = createClient();
 
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
-        // This should be handled by middleware, but as a safeguard.
         redirect('/login');
     }
 
-    const { data: artist } = await supabase
+    const { data: artist, error } = await supabase
         .from('artists')
         .select('*')
         .eq('user_id', user.id)
         .single();
     
+    if (error && error.code !== 'PGRST116') {
+      // PGRST116 is 'No rows found', which we handle below.
+      // For other errors, we can show a generic error message.
+       return (
+            <Card>
+                <CardHeader>
+                    <CardTitle>Error</CardTitle>
+                    <CardDescription>
+                        Could not load your profile. Please try again later.
+                        <p className="text-xs text-muted-foreground mt-2">{error.message}</p>
+                    </CardDescription>
+                </CardHeader>
+            </Card>
+       )
+    }
+
     if (!artist) {
        return (
             <Card>
@@ -27,7 +47,6 @@ export default async function MyProfilePage() {
                     <CardTitle>Profile Not Found</CardTitle>
                     <CardDescription>
                         We couldn't find an artist profile associated with your account. 
-                        This can sometimes happen if the profile is still being created. Please wait a moment and refresh the page.
                         If the problem persists, please contact support.
                     </CardDescription>
                 </CardHeader>
