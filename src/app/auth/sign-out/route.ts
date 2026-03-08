@@ -1,9 +1,9 @@
-import { createClient } from '@/lib/supabase/server'
+import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { type NextRequest, NextResponse } from 'next/server'
 
 export async function POST(req: NextRequest) {
-  const supabase = createClient()
+  const supabase = createServerSupabaseClient()
 
   // Check if we have a session
   const {

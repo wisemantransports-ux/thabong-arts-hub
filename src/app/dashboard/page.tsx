@@ -1,81 +1,91 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Paintbrush, User, PlusCircle } from 'lucide-react';
-import { getArtworks } from '@/lib/data';
 import { Artwork } from '@/lib/types';
-import { createClient } from '@/lib/supabase/server';
-import { redirect } from 'next/navigation';
+import { getArtworks } from '@/lib/data';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 export default async function DashboardPage() {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+  // ✅ Server-side Supabase client
+  const supabase = createServerSupabaseClient();
 
-    if (!user) {
-        redirect('/login');
-    }
+  // ✅ Get session
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) redirect('/login');
 
-    let artworks: Artwork[] = [];
-    const { data: artist } = await supabase
-        .from('artists')
-        .select('id')
-        .eq('user_id', user.id)
-        .single();
+  // ✅ Fetch artist row
+  const { data: artist, error: artistError } = await supabase
+    .from('artists')
+    .select('*')
+    .eq('user_id', session.user.id)
+    .single();
 
-    if (artist) {
-        artworks = await getArtworks({ artist_id: artist.id });
-    }
+  if (artistError || !artist) redirect('/login');
 
-    const totalArtworks = artworks.length;
-    const availableArtworks = artworks.filter(a => a.status === 'available').length;
-    const soldArtworks = totalArtworks - availableArtworks;
-    const totalValue = artworks.reduce((sum, art) => sum + art.price, 0);
+  // ✅ Fetch artworks for this artist
+  let artworks: Artwork[] = [];
+  try {
+    artworks = await getArtworks({ artist_id: artist.id });
+  } catch (err) {
+    artworks = [];
+  }
+
+  const totalArtworks = artworks.length;
+  const availableArtworks = artworks.filter(a => a.status === 'available').length;
+  const soldArtworks = totalArtworks - availableArtworks;
+  const totalValue = artworks.reduce((sum, art) => sum + art.price, 0);
 
   return (
     <div className="space-y-6">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-             <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Artworks</CardTitle>
-                    <Paintbrush className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold">{totalArtworks}</div>
-                    <p className="text-xs text-muted-foreground">pieces listed</p>
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Available for Sale</CardTitle>
-                    <Paintbrush className="h-4 w-4 text-green-500" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold">{availableArtworks}</div>
-                    <p className="text-xs text-muted-foreground">{totalArtworks > 0 ? ((availableArtworks/totalArtworks)*100).toFixed(0) : 0}% of your collection</p>
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Sold Artworks</CardTitle>
-                    <Paintbrush className="h-4 w-4 text-red-500" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold">{soldArtworks}</div>
-                     <p className="text-xs text-muted-foreground">Congratulations!</p>
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Portfolio Value</CardTitle>
-                    <Paintbrush className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold">BWP {totalValue.toLocaleString()}</div>
-                     <p className="text-xs text-muted-foreground">Based on listed prices</p>
-                </CardContent>
-            </Card>
-        </div>
+      {/* Stats Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Artworks</CardTitle>
+            <Paintbrush className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalArtworks}</div>
+            <p className="text-xs text-muted-foreground">pieces listed</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Available for Sale</CardTitle>
+            <Paintbrush className="h-4 w-4 text-green-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{availableArtworks}</div>
+            <p className="text-xs text-muted-foreground">
+              {totalArtworks > 0 ? ((availableArtworks / totalArtworks) * 100).toFixed(0) : 0}% of your collection
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Sold Artworks</CardTitle>
+            <Paintbrush className="h-4 w-4 text-red-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{soldArtworks}</div>
+            <p className="text-xs text-muted-foreground">Congratulations!</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Portfolio Value</CardTitle>
+            <Paintbrush className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">BWP {totalValue.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">Based on listed prices</p>
+          </CardContent>
+        </Card>
+      </div>
 
+      {/* Action Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
@@ -110,19 +120,21 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
-       <Card className="bg-primary text-primary-foreground">
-          <CardHeader>
-            <CardTitle>Ready to list a new masterpiece?</CardTitle>
-            <CardDescription className="text-primary-foreground/80">Add your latest creation to the marketplace in just a few steps.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button variant="secondary" asChild>
-               <Link href="/dashboard/artworks">
-                <PlusCircle className="mr-2 h-4 w-4" /> Add New Artwork
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
+      <Card className="bg-primary text-primary-foreground">
+        <CardHeader>
+          <CardTitle>Ready to list a new masterpiece?</CardTitle>
+          <CardDescription className="text-primary-foreground/80">
+            Add your latest creation to the marketplace in just a few steps.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button variant="secondary" asChild>
+            <Link href="/dashboard/artworks">
+              <PlusCircle className="mr-2 h-4 w-4" /> Add New Artwork
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -1,11 +1,11 @@
 
-import { createClient } from '@/lib/supabase/server';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { Artwork, Artist, Event, Business, ArtworkWithArtist } from './types';
 
 // ARTISTS
 export async function getArtists(): Promise<Artist[]> {
   try {
-    const supabase = createClient();
+    const supabase = createServerSupabaseClient();
     const { data, error } = await supabase.from('artists').select('*');
     if (error) throw error;
     return data || [];
@@ -17,7 +17,7 @@ export async function getArtists(): Promise<Artist[]> {
 
 export async function getArtistBySlug(slug: string): Promise<Artist | null> {
   try {
-    const supabase = createClient();
+    const supabase = createServerSupabaseClient();
     const { data, error } = await supabase.from('artists').select('*').eq('slug', slug).single();
     if (error && error.code !== 'PGRST116') { // PGRST116: "exact one row expected, but found no rows" - this is not an error for us.
         throw error;
@@ -31,7 +31,7 @@ export async function getArtistBySlug(slug: string): Promise<Artist | null> {
 
 export async function getArtistById(id: string): Promise<Artist | null> {
   try {
-    const supabase = createClient();
+    const supabase = createServerSupabaseClient();
     const { data, error } = await supabase.from('artists').select('*').eq('id', id).single();
     if (error && error.code !== 'PGRST116') throw error;
     return data;
@@ -44,7 +44,7 @@ export async function getArtistById(id: string): Promise<Artist | null> {
 // ARTWORKS
 export async function getArtworks(filters: { artist_id?: string; limit?: number } = {}): Promise<ArtworkWithArtist[]> {
   try {
-    const supabase = createClient();
+    const supabase = createServerSupabaseClient();
     let query = supabase
       .from('artworks')
       .select('*, artists (name, slug, phone, profile_image, bio)')
@@ -69,7 +69,7 @@ export async function getArtworks(filters: { artist_id?: string; limit?: number 
 
 export async function getArtworkById(id: string): Promise<ArtworkWithArtist | null> {
   try {
-    const supabase = createClient();
+    const supabase = createServerSupabaseClient();
     const { data, error } = await supabase
       .from('artworks')
       .select('*, artists (name, slug, phone, profile_image, bio)')
@@ -87,7 +87,7 @@ export async function getArtworkById(id: string): Promise<ArtworkWithArtist | nu
 // EVENTS
 export async function getEvents(filters: { limit?: number, past?: boolean } = {}): Promise<Event[]> {
   try {
-    const supabase = createClient();
+    const supabase = createServerSupabaseClient();
     let query = supabase
       .from('events')
       .select('*')
@@ -109,7 +109,7 @@ export async function getEvents(filters: { limit?: number, past?: boolean } = {}
 // BUSINESSES
 export async function getBusinesses(filters: { limit?: number } = {}): Promise<Business[]> {
   try {
-    const supabase = createClient();
+    const supabase = createServerSupabaseClient();
     let query = supabase.from('businesses').select('*');
 
     if(filters.limit){
@@ -126,7 +126,7 @@ export async function getBusinesses(filters: { limit?: number } = {}): Promise<B
 
 export async function getBusinessBySlug(slug: string): Promise<Business | null> {
   try {
-    const supabase = createClient();
+    const supabase = createServerSupabaseClient();
     const { data, error } = await supabase.from('businesses').select('*').eq('slug', slug).single();
     if (error && error.code !== 'PGRST116') throw error;
     return data;

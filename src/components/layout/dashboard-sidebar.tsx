@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/sidebar';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { type Artist } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -46,7 +46,7 @@ export default function DashboardSidebar({
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const supabase = createClient();
+    const supabase = createBrowserSupabaseClient();
     const fetchArtist = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {

@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 export default async function SupabaseTestPage() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -19,7 +19,7 @@ export default async function SupabaseTestPage() {
     errorMessage = 'Your NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY is missing or using placeholder values in .env.local. Please check your configuration and restart the server.';
   } else {
     try {
-      const supabase = createClient();
+      const supabase = createServerSupabaseClient();
       const { data, error } = await supabase.from('artists').select('id').limit(1);
 
       if (error) {

@@ -9,7 +9,7 @@ import { Session } from '@supabase/supabase-js';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
-import { createClient } from '@/lib/supabase/client';
+import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 
 export default function Header() {
   const pathname = usePathname();
@@ -20,7 +20,7 @@ export default function Header() {
   const isDashboard = pathname.startsWith('/dashboard') || pathname.startsWith('/admin');
   
   useEffect(() => {
-    const supabase = createClient();
+    const supabase = createBrowserSupabaseClient();
     const getSession = async () => {
       const { data } = await supabase.auth.getSession();
       setSession(data.session);

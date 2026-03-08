@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 import ProfileForm from './_components/profile-form';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { redirect } from 'next/navigation';
@@ -10,49 +10,48 @@ export const metadata = {
 };
 
 export default async function EditProfilePage() {
-    const supabase = createClient();
+  // ✅ Server-side Supabase client
+  const supabase = createServerSupabaseClient();
 
-    const { data: { user } } = await supabase.auth.getUser();
+  // ✅ Get session
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) redirect('/login');
 
-    if (!user) {
-        redirect('/login');
-    }
+  // ✅ Fetch artist associated with logged-in user
+  const { data: artist, error } = await supabase
+    .from('artists')
+    .select('*')
+    .eq('user_id', session.user.id)
+    .single();
 
-    const { data: artist, error } = await supabase
-        .from('artists')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-    
-    if (error && error.code !== 'PGRST116') {
-      // PGRST116 is 'No rows found', which we handle below.
-      // For other errors, we can show a generic error message.
-       return (
-            <Card>
-                <CardHeader>
-                    <CardTitle>Error</CardTitle>
-                    <CardDescription>
-                        Could not load your profile. Please try again later.
-                        <p className="text-xs text-muted-foreground mt-2">{error.message}</p>
-                    </CardDescription>
-                </CardHeader>
-            </Card>
-       )
-    }
+  if (error && error.code !== 'PGRST116') {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Error</CardTitle>
+          <CardDescription>
+            Could not load your profile. Please try again later.
+            <p className="text-xs text-muted-foreground mt-2">{error.message}</p>
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
 
-    if (!artist) {
-       return (
-            <Card>
-                <CardHeader>
-                    <CardTitle>Profile Not Found</CardTitle>
-                    <CardDescription>
-                        We couldn't find an artist profile associated with your account. 
-                        If the problem persists, please contact support.
-                    </CardDescription>
-                </CardHeader>
-            </Card>
-       )
-    }
+  if (!artist) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Profile Not Found</CardTitle>
+          <CardDescription>
+            We couldn't find an artist profile associated with your account. 
+            If the problem persists, please contact support.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
 
-    return <ProfileForm artist={artist as Artist} />;
+  // ✅ Render Profile Form with logged-in artist
+  return <ProfileForm artist={artist as Artist} />;
 }
