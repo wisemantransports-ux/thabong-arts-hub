@@ -5,22 +5,25 @@ import { Paintbrush, User, PlusCircle } from 'lucide-react';
 import { getArtworks } from '@/lib/data';
 import { Artwork } from '@/lib/types';
 import { createClient } from '@/lib/supabase/server';
+import { redirect } from 'next/navigation';
 
 export default async function DashboardPage() {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
-    let artworks: Artwork[] = [];
-    if (user) {
-        const { data: artist } = await supabase
-            .from('artists')
-            .select('id')
-            .eq('user_id', user.id)
-            .single();
+    if (!user) {
+        redirect('/login');
+    }
 
-        if (artist) {
-            artworks = await getArtworks({ artist_id: artist.id });
-        }
+    let artworks: Artwork[] = [];
+    const { data: artist } = await supabase
+        .from('artists')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+    if (artist) {
+        artworks = await getArtworks({ artist_id: artist.id });
     }
 
     const totalArtworks = artworks.length;

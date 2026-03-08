@@ -11,26 +11,27 @@ import { MoreHorizontal } from 'lucide-react';
 import AddArtworkSheet from './_components/add-artwork-sheet';
 import { createClient } from '@/lib/supabase/server';
 import { Artist } from '@/lib/types';
+import { redirect } from 'next/navigation';
 
 export default async function MyArtworksPage() {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
+    if (!user) {
+        redirect('/login');
+    }
+
     let artworks = [];
-    let artist: Artist | null = null;
+    const { data: artistProfile } = await supabase
+        .from('artists')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+    
+    const artist: Artist | null = artistProfile;
 
-    if (user) {
-        const { data: artistProfile } = await supabase
-            .from('artists')
-            .select('*')
-            .eq('user_id', user.id)
-            .single();
-        
-        artist = artistProfile;
-
-        if (artist) {
-            artworks = await getArtworks({ artist_id: artist.id });
-        }
+    if (artist) {
+        artworks = await getArtworks({ artist_id: artist.id });
     }
 
     if (!artist) {
