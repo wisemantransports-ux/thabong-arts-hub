@@ -1,0 +1,158 @@
+import Image from 'next/image';
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import { Metadata } from 'next';
+
+import { getArtworkById, getArtistById } from '@/lib/data-mock'; // Using a separate mock with getArtistById
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import Header from '@/components/layout/header';
+import Footer from '@/components/layout/footer';
+import { WhatsAppIcon } from '@/components/icons/whatsapp-icon';
+import { generateArtworkSeoMetadata } from '@/ai/flows/generate-artwork-seo-metadata-flow';
+
+type Props = {
+  params: { id: string };
+};
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const artwork = await getArtworkById(params.id);
+
+  if (!artwork) {
+    return {
+      title: 'Artwork Not Found',
+    };
+  }
+
+  const seoData = await generateArtworkSeoMetadata({
+    artworkTitle: artwork.title,
+    artworkDescription: artwork.description,
+    artistName: artwork.artist_name,
+    artworkCategory: artwork.category,
+    artworkPrice: artwork.price,
+  });
+
+  return {
+    title: seoData.seoTitle,
+    description: seoData.metaDescription,
+    openGraph: {
+        title: seoData.seoTitle,
+        description: seoData.metaDescription,
+        images: [
+            {
+                url: artwork.image_url,
+                width: 800,
+                height: 800,
+                alt: artwork.title,
+            },
+        ],
+    },
+  };
+}
+
+
+export default async function ArtworkDetailPage({ params }: Props) {
+  const artwork = await getArtworkById(params.id);
+  
+  if (!artwork) {
+    notFound();
+  }
+  
+  const artist = await getArtistById(artwork.artist_id);
+
+  const whatsappMessage = encodeURIComponent(
+    `Hello, I am interested in your artwork "${artwork.title}" from the Thapong Visual Art Centre website.`
+  );
+  const whatsappUrl = `https://wa.me/${artwork.artist_phone}?text=${whatsappMessage}`;
+
+  return (
+    <div className="flex flex-col min-h-screen">
+      <Header />
+      <main className="flex-grow container mx-auto px-4 py-8 lg:py-16">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16">
+          <div className="relative aspect-square">
+            <Image
+              src={artwork.image_url}
+              alt={artwork.title}
+              fill
+              className="object-contain rounded-lg shadow-lg"
+              sizes="(max-width: 1024px) 100vw, 50vw"
+              priority
+              data-ai-hint="artwork painting"
+            />
+          </div>
+          <div>
+            {artwork.status === 'sold' && (
+              <Badge variant="destructive" className="mb-2">Sold</Badge>
+            )}
+            <h1 className="font-headline text-4xl lg:text-5xl font-bold">{artwork.title}</h1>
+            <p className="text-xl text-muted-foreground mt-2">
+              by <Link href={`/artists/${artist?.slug}`} className="hover:text-primary transition-colors">{artwork.artist_name}</Link>
+            </p>
+            <p className="text-3xl font-semibold my-6">BWP {artwork.price.toLocaleString()}</p>
+            
+            <Button asChild size="lg" disabled={artwork.status === 'sold'} className="w-full sm:w-auto">
+              <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
+                <WhatsAppIcon className="mr-2 h-5 w-5" />
+                Contact Artist on WhatsApp
+              </a>
+            </Button>
+            
+            <div className="mt-8 space-y-4">
+              <h2 className="font-headline text-2xl font-semibold">Description</h2>
+              <p className="text-muted-foreground whitespace-pre-wrap">{artwork.description}</p>
+            </div>
+
+             <div className="mt-8 space-y-4">
+                <h2 className="font-headline text-2xl font-semibold">Details</h2>
+                <ul className="text-muted-foreground list-none space-y-1">
+                    <li><strong>Category:</strong> {artwork.category}</li>
+                    <li><strong>Status:</strong> <span className={artwork.status === 'available' ? 'text-green-600' : 'text-red-600'}>{artwork.status}</span></li>
+                </ul>
+            </div>
+          </div>
+        </div>
+        
+        {artist && (
+          <div className="mt-16 lg:mt-24">
+            <Card>
+                <CardHeader>
+                    <CardTitle>About the Artist</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex flex-col sm:flex-row items-start gap-6">
+                        <div className="relative h-24 w-24 rounded-full overflow-hidden flex-shrink-0">
+                            <Image
+                                src={artist.profile_image}
+                                alt={artist.name}
+                                fill
+                                className="object-cover"
+                                data-ai-hint="artist portrait"
+                            />
+                        </div>
+                        <div>
+                            <h3 className="text-2xl font-bold font-headline">{artist.name}</h3>
+                            <p className="text-muted-foreground mt-2 mb-4">{artist.bio}</p>
+                            <Button variant="outline" asChild>
+                                <Link href={`/artists/${artist.slug}`}>View Profile & Artworks</Link>
+                            </Button>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+          </div>
+        )}
+      </main>
+      <Footer />
+    </div>
+  );
+}
+
+// This needs to be in a separate file to be mocked easily, but for this context it's here
+// This is because the original `data.ts` only allows getting artist by slug.
+async function getArtistById(id: string) {
+    const { getArtists } = await import('@/lib/data');
+    const artists = await getArtists();
+    return artists.find(a => a.id === id);
+}
