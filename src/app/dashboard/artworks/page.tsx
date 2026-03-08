@@ -7,8 +7,7 @@ import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import AddArtworkSheet from './_components/add-artwork-sheet';
-import { getArtworks } from '@/lib/data';
+import Link from 'next/link';
 
 export default async function MyArtworksPage() {
   const supabase = createServerSupabaseClient();
@@ -20,17 +19,19 @@ export default async function MyArtworksPage() {
 
   const { data: artist, error: artistError } = await supabase
     .from('artists')
-    .select('*')
+    .select('id')
     .eq('user_id', user.id)
     .single();
 
-  // If artist profile is missing or incomplete, redirect them to create it.
-  if (artistError || !artist || !artist.name) {
-    redirect('/dashboard/edit-profile?next=/dashboard/artworks');
+  if (artistError || !artist) {
+    redirect('/dashboard/edit-profile?next=/dashboard/artworks&message=Please complete your profile first.');
   }
 
-  // Fetch artworks scoped to the logged-in artist
-  const artworks = await getArtworks({ artist_id: artist.id });
+  const { data: artworks } = await supabase
+    .from('artworks')
+    .select('*')
+    .eq('artist_id', artist.id)
+    .order('created_at', { ascending: false });
 
   return (
     <Card>
@@ -39,12 +40,12 @@ export default async function MyArtworksPage() {
           <CardTitle>My Artworks</CardTitle>
           <CardDescription>A list of all your artworks on the platform.</CardDescription>
         </div>
-        <AddArtworkSheet artistName={artist.name}>
-          <Button>
+        <Button asChild>
+          <Link href="/dashboard/artworks/new">
             <PlusCircle className="mr-2 h-4 w-4" />
-            Add Artwork
-          </Button>
-        </AddArtworkSheet>
+            Add New Artwork
+          </Link>
+        </Button>
       </CardHeader>
       <CardContent>
         <Table>
@@ -60,7 +61,7 @@ export default async function MyArtworksPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {artworks.map((artwork) => (
+            {artworks && artworks.map((artwork) => (
               <TableRow key={artwork.id}>
                 <TableCell className="hidden sm:table-cell">
                   <Image
@@ -68,17 +69,17 @@ export default async function MyArtworksPage() {
                     className="aspect-square rounded-md object-cover"
                     height={64}
                     width={64}
-                    src={artwork.image_url}
+                    src={artwork.image_url || `https://picsum.photos/seed/${artwork.id}/64`}
                     data-ai-hint="artwork painting"
                   />
                 </TableCell>
                 <TableCell className="font-medium">{artwork.title}</TableCell>
                 <TableCell>
-                  <Badge variant={artwork.status === 'available' ? 'outline' : 'destructive'}>
+                   <Badge variant={artwork.status === 'published' ? 'default' : 'secondary'} className="capitalize">
                     {artwork.status}
                   </Badge>
                 </TableCell>
-                <TableCell>BWP {artwork.price.toLocaleString()}</TableCell>
+                <TableCell>BWP {artwork.price?.toLocaleString()}</TableCell>
                 <TableCell>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>

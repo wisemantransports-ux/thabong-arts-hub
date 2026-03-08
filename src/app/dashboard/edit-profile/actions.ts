@@ -6,8 +6,8 @@ import { z } from 'zod';
 
 const profileSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters.'),
-  phone: z.string().min(8, 'Please enter a valid phone number.'),
-  bio: z.string().min(20, 'Biography should be at least 20 characters long.'),
+  phone: z.string().min(8, 'Please enter a valid phone number.').optional().or(z.literal('')),
+  bio: z.string().min(20, 'Biography should be at least 20 characters long.').optional().or(z.literal('')),
   slug: z.string().min(3, 'Slug must be at least 3 characters.').regex(/^[a-z0-9-]+$/, 'Slug can only contain lowercase letters, numbers, and hyphens.'),
 });
 
@@ -23,12 +23,7 @@ export async function updateProfile(
     return { message: 'Not authenticated. Please log in.', type: 'error' };
   }
 
-  const validatedFields = profileSchema.safeParse({
-    name: formData.get('name'),
-    phone: formData.get('phone'),
-    bio: formData.get('bio'),
-    slug: formData.get('slug'),
-  });
+  const validatedFields = profileSchema.safeParse(Object.fromEntries(formData.entries()));
 
   if (!validatedFields.success) {
       const errorMessages = validatedFields.error.flatten().fieldErrors;
@@ -46,12 +41,11 @@ export async function updateProfile(
   // Handle image upload if a new one is provided
   if (imageFile && imageFile.size > 0) {
     const fileExt = imageFile.name.split('.').pop();
-    const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-    const filePath = `profile-images/${fileName}`;
+    const fileName = `${user.id}-profile.${fileExt}`;
+    const filePath = `artist-profiles/${fileName}`;
 
-    // Using upsert: true to replace the image if it already exists.
     const { error: uploadError } = await supabase.storage
-      .from('artworks')
+      .from('artworks') // Note: Using a single bucket for simplicity
       .upload(filePath, imageFile, { upsert: true });
 
     if (uploadError) {
@@ -61,18 +55,13 @@ export async function updateProfile(
     publicUrl = supabase.storage.from('artworks').getPublicUrl(filePath).data.publicUrl;
   }
   
-  // Prepare data for upsert
-  const upsertData: { 
-    user_id: string;
-    email: string;
+  const updateData: { 
     name: string; 
-    phone: string; 
-    bio: string; 
+    phone?: string; 
+    bio?: string; 
     slug: string; 
     profile_image?: string 
   } = {
-    user_id: user.id, // This is the key for the upsert operation
-    email: user.email!,
     name,
     phone,
     bio,
@@ -80,28 +69,27 @@ export async function updateProfile(
   };
   
   if (publicUrl) {
-    upsertData.profile_image = publicUrl;
+    updateData.profile_image = publicUrl;
   }
 
-  // Use upsert to either create a new profile or update an existing one.
-  // Supabase uses the 'user_id' as the conflict target to find the row to update.
-  const { error: upsertError } = await supabase
+  // Update artist profile in the database
+  const { error: updateError } = await supabase
     .from('artists')
-    .upsert(upsertData, { onConflict: 'user_id', defaultToNull: false });
+    .update(updateData)
+    .eq('user_id', user.id);
 
-  if (upsertError) {
-    // Check for unique constraint violation on slug
-    if (upsertError.code === '23505' && upsertError.message.includes('artists_slug_key')) {
+  if (updateError) {
+    if (updateError.code === '23505' && updateError.message.includes('artists_slug_key')) {
          return { message: `Database Error: The profile URL slug '${slug}' is already taken. Please choose another.`, type: 'error' };
     }
-    return { message: `Database Error: ${upsertError.message}`, type: 'error' };
+    return { message: `Database Error: ${updateError.message}`, type: 'error' };
   }
   
-  // Revalidate paths to show updated data
+  // Revalidate paths to show updated data across the site
   revalidatePath('/dashboard/edit-profile');
   revalidatePath('/dashboard');
   revalidatePath('/artists');
-  revalidatePath(`/artists/${slug}`);
+  revalidatePath(`/artist/${slug}`);
 
   return { message: 'Profile updated successfully!', type: 'success' };
 }

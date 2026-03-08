@@ -1,36 +1,26 @@
 'use server';
 
-import { createClient } from '@/lib/supabase/server';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
 const artworkSchema = z.object({
+  artist_id: z.string().uuid(),
   title: z.string().min(3, 'Title must be at least 3 characters.'),
-  description: z.string().min(10, 'Description must be at least 10 characters.'),
+  description: z.string().optional(),
   price: z.coerce.number().min(0, 'Price cannot be negative.'),
-  category: z.string().min(1, 'Please select a category.'),
-  status: z.enum(['available', 'sold', 'reserved']),
+  status: z.enum(['draft', 'published']),
 });
 
 export async function addArtwork(
   prevState: { message: string, type: 'success' | 'error' | 'idle' },
   formData: FormData
 ): Promise<{ message: string, type: 'success' | 'error' }> {
-  const supabase = createClient();
+  const supabase = createServerSupabaseClient();
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     return { message: 'Not authenticated.', type: 'error' };
-  }
-
-  const { data: artist, error: artistError } = await supabase
-    .from('artists')
-    .select('id')
-    .eq('user_id', user.id)
-    .single();
-
-  if (artistError || !artist) {
-    return { message: 'Artist profile not found.', type: 'error' };
   }
   
   const validatedFields = artworkSchema.safeParse(Object.fromEntries(formData.entries()));
@@ -50,7 +40,7 @@ export async function addArtwork(
   }
   
   const fileExt = imageFile.name.split('.').pop();
-  const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+  const fileName = `${validatedFields.data.artist_id}-${Date.now()}.${fileExt}`;
   const filePath = `artwork-images/${fileName}`;
 
   const { error: uploadError } = await supabase.storage
@@ -67,16 +57,18 @@ export async function addArtwork(
     .from('artworks')
     .insert({
       ...validatedFields.data,
-      artist_id: artist.id,
       image_url: publicUrl,
     });
 
   if (insertError) {
+    // Attempt to delete the orphaned image file if the DB insert fails
+    await supabase.storage.from('artworks').remove([filePath]);
     return { message: `Database Error: ${insertError.message}`, type: 'error' };
   }
 
   revalidatePath('/dashboard/artworks');
   revalidatePath('/dashboard');
+  revalidatePath('/marketplace');
   
   return { message: 'Artwork added successfully!', type: 'success' };
 }

@@ -13,34 +13,37 @@ export interface Database {
         Row: {
           id: string
           user_id: string
-          name: string
-          slug: string
-          bio: string
-          profile_image: string
-          phone: string
-          email: string
+          name: string | null
+          slug: string | null
+          bio: string | null
+          profile_image: string | null
+          phone: string | null
+          email: string | null
+          role: string
           created_at: string
         }
         Insert: {
           id?: string
           user_id: string
-          name: string
-          slug: string
-          bio: string
-          profile_image: string
-          phone: string
-          email: string
+          name?: string | null
+          slug?: string | null
+          bio?: string | null
+          profile_image?: string | null
+          phone?: string | null
+          email?: string | null
+          role?: string
           created_at?: string
         }
         Update: {
           id?: string
           user_id?: string
-          name?: string
-          slug?: string
-          bio?: string
-          profile_image?: string
-          phone?: string
-          email?: string
+          name?: string | null
+          slug?: string | null
+          bio?: string | null
+          profile_image?: string | null
+          phone?: string | null
+          email?: string | null
+          role?: string
           created_at?: string
         }
       }
@@ -49,33 +52,30 @@ export interface Database {
           id: string
           artist_id: string
           title: string
-          description: string
-          price: number
-          image_url: string
-          category: string
-          status: 'available' | 'sold' | 'reserved'
+          description: string | null
+          price: number | null
+          image_url: string | null
+          status: string // 'draft' | 'published'
           created_at: string
         }
         Insert: {
           id?: string
           artist_id: string
           title: string
-          description: string
-          price: number
-          image_url: string
-          category: string
-          status?: 'available' | 'sold' | 'reserved'
+          description?: string | null
+          price?: number | null
+          image_url?: string | null
+          status?: string
           created_at?: string
         }
         Update: {
           id?: string
           artist_id?: string
           title?: string
-          description?: string
-          price?: number
-          image_url?: string
-          category?: string
-          status?: 'available' | 'sold' | 'reserved'
+          description?: string | null
+          price?: number | null
+          image_url?: string | null
+          status?: string
           created_at?: string
         }
       }

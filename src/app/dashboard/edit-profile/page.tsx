@@ -23,35 +23,19 @@ export default async function EditProfilePage() {
     .eq('user_id', user.id)
     .single();
 
-  // Handle database errors, but ignore "PGRST116" (no row found), as this is expected for new users.
-  if (error && error.code !== 'PGRST116') {
+  if (error || !artist) {
     return (
       <Card>
         <CardHeader>
           <CardTitle>Error</CardTitle>
           <CardDescription>
-            Could not load your profile. Please try again later.
-            <p className="text-xs text-muted-foreground mt-2">{error.message}</p>
+            Could not load your artist profile. If you just signed up, please wait a moment and refresh.
+            <p className="text-xs text-muted-foreground mt-2">{error?.message}</p>
           </CardDescription>
         </CardHeader>
       </Card>
     );
   }
 
-  // If the artist profile doesn't exist (new signup), create a default object.
-  // The ProfileForm will use this to render the form for the first time.
-  // The form's server action will then 'upsert' this data to create the profile.
-  const artistData = artist || {
-    id: '', // No ID yet for a new profile
-    user_id: user.id,
-    email: user.email || '',
-    name: '',
-    slug: '',
-    bio: '',
-    phone: '',
-    profile_image: `https://picsum.photos/seed/${user.id}/400/400`,
-    created_at: '',
-  };
-
-  return <ProfileForm artist={artistData as Artist} />;
+  return <ProfileForm artist={artist as Artist} />;
 }
