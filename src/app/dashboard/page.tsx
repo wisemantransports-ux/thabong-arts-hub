@@ -4,10 +4,25 @@ import { Button } from '@/components/ui/button';
 import { Paintbrush, User, PlusCircle } from 'lucide-react';
 import { getArtworks } from '@/lib/data';
 import { Artwork } from '@/lib/types';
+import { createClient } from '@/lib/supabase/server';
 
 export default async function DashboardPage() {
-    // In a real app, you would fetch data for the logged-in user
-    const artworks: Artwork[] = await getArtworks({ artist_id: '1' });
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    let artworks: Artwork[] = [];
+    if (user) {
+        const { data: artist } = await supabase
+            .from('artists')
+            .select('id')
+            .eq('user_id', user.id)
+            .single();
+
+        if (artist) {
+            artworks = await getArtworks({ artist_id: artist.id });
+        }
+    }
+
     const totalArtworks = artworks.length;
     const availableArtworks = artworks.filter(a => a.status === 'available').length;
     const soldArtworks = totalArtworks - availableArtworks;
@@ -33,7 +48,7 @@ export default async function DashboardPage() {
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold">{availableArtworks}</div>
-                    <p className="text-xs text-muted-foreground">{((availableArtworks/totalArtworks)*100).toFixed(0)}% of your collection</p>
+                    <p className="text-xs text-muted-foreground">{totalArtworks > 0 ? ((availableArtworks/totalArtworks)*100).toFixed(0) : 0}% of your collection</p>
                 </CardContent>
             </Card>
             <Card>
@@ -99,7 +114,7 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent>
             <Button variant="secondary" asChild>
-               <Link href="/dashboard/artworks#add-new">
+               <Link href="/dashboard/artworks">
                 <PlusCircle className="mr-2 h-4 w-4" /> Add New Artwork
               </Link>
             </Button>

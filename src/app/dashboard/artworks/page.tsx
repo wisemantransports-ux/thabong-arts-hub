@@ -9,10 +9,40 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { MoreHorizontal } from 'lucide-react';
 
 import AddArtworkSheet from './_components/add-artwork-sheet';
+import { createClient } from '@/lib/supabase/server';
+import { Artist } from '@/lib/types';
 
 export default async function MyArtworksPage() {
-    // In a real app, this would be a protected route and fetch data for the logged-in user
-    const artworks = await getArtworks({ artist_id: '1' });
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    let artworks = [];
+    let artist: Artist | null = null;
+
+    if (user) {
+        const { data: artistProfile } = await supabase
+            .from('artists')
+            .select('*')
+            .eq('user_id', user.id)
+            .single();
+        
+        artist = artistProfile;
+
+        if (artist) {
+            artworks = await getArtworks({ artist_id: artist.id });
+        }
+    }
+
+    if (!artist) {
+        return (
+            <Card>
+                <CardHeader>
+                    <CardTitle>My Artworks</CardTitle>
+                    <CardDescription>We couldn't find an artist profile associated with your account. Please complete your profile first.</CardDescription>
+                </CardHeader>
+            </Card>
+        )
+    }
 
     return (
         <Card>
@@ -21,7 +51,7 @@ export default async function MyArtworksPage() {
                     <CardTitle>My Artworks</CardTitle>
                     <CardDescription>A list of all your artworks on the platform.</CardDescription>
                 </div>
-                <AddArtworkSheet>
+                <AddArtworkSheet artistName={artist.name}>
                     <Button>
                         <PlusCircle className="mr-2 h-4 w-4" />
                         Add Artwork

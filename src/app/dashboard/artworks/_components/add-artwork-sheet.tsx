@@ -39,7 +39,7 @@ const artworkSchema = z.object({
 
 type ArtworkFormValues = z.infer<typeof artworkSchema>;
 
-export default function AddArtworkSheet({ children }: { children: React.ReactNode }) {
+export default function AddArtworkSheet({ children, artistName }: { children: React.ReactNode, artistName: string }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
@@ -82,7 +82,7 @@ export default function AddArtworkSheet({ children }: { children: React.ReactNod
     try {
         const result = await generateArtworkDescription({
             title,
-            artistName: 'Mary Molefe', // In real app, get from user session
+            artistName: artistName,
             medium: medium || 'Not specified',
             style: style || 'Not specified',
             inspiration,
