@@ -23,7 +23,7 @@ export default async function EditProfilePage() {
     .eq('user_id', session.user.id)
     .single();
 
-  // If there's a major error (not "no rows found"), show an error page.
+  // If there's a major error (but not "no rows found", which is expected for new users), show an error page.
   if (error && error.code !== 'PGRST116') {
     return (
       <Card>
@@ -39,17 +39,16 @@ export default async function EditProfilePage() {
   }
 
   // If the artist profile doesn't exist yet (new signup), we still render the form
-  // with a partial artist object containing the user's email.
-  // This allows the ProfileForm to handle the initial profile CREATION.
+  // with a partial artist object. The form submission will use an 'upsert' to create the profile.
   const artistData = artist || {
-    id: '', // No ID yet
+    id: '', // No ID yet for a new profile
     user_id: session.user.id,
     email: session.user.email || '',
     name: '',
     slug: '',
     bio: '',
     phone: '',
-    profile_image: '',
+    profile_image: `https://picsum.photos/seed/${session.user.id}/400/400`,
     created_at: '',
   };
 

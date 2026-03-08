@@ -87,7 +87,7 @@ export async function updateProfile(
   // Supabase uses the 'user_id' as the conflict target to find the row to update.
   const { error: upsertError } = await supabase
     .from('artists')
-    .upsert(upsertData, { onConflict: 'user_id' });
+    .upsert(upsertData, { onConflict: 'user_id', defaultToNull: false });
 
   if (upsertError) {
     // Check for unique constraint violation on slug
