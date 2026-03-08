@@ -3,7 +3,7 @@ import { Artwork, Artist, Event, Business, ArtworkWithArtist } from './types';
 import { notFound } from 'next/navigation';
 import { mockArtists, mockArtworks, mockEvents, mockBusinesses } from './mock-data';
 
-const USE_MOCK_DATA = process.env.NEXT_PUBLIC_SUPABASE_URL === 'your-supabase-url-here';
+const USE_MOCK_DATA = process.env.NEXT_PUBLIC_SUPABASE_URL === 'https://placeholder.supabase.co';
 
 // ARTISTS
 export async function getArtists(): Promise<Artist[]> {
