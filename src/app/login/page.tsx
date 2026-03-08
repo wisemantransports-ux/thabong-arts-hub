@@ -9,6 +9,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { login } from '../auth/actions';
+import { useFormStatus } from 'react-dom';
+
+function LoginButton() {
+  const { pending } = useFormStatus();
+
+  return (
+    <Button type="submit" className="w-full" disabled={pending}>
+      {pending ? 'Logging in...' : 'Login'}
+    </Button>
+  );
+}
 
 export default function LoginPage() {
   const searchParams = useSearchParams();
@@ -57,9 +68,7 @@ export default function LoginPage() {
                 required
               />
             </div>
-            <Button type="submit" className="w-full">
-              Login
-            </Button>
+            <LoginButton />
           </form>
           <div className="mt-4 text-center text-sm">
             Don't have an account?{' '}

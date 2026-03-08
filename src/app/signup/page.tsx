@@ -15,6 +15,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { signup } from '../auth/actions';
+import { useFormStatus } from 'react-dom';
+
+function SignupButton() {
+  const { pending } = useFormStatus();
+
+  return (
+    <Button type="submit" className="w-full" disabled={pending}>
+      {pending ? 'Signing up...' : 'Sign Up'}
+    </Button>
+  );
+}
 
 export default function SignupPage() {
   const searchParams = useSearchParams();
@@ -61,9 +72,7 @@ export default function SignupPage() {
                 minLength={6}
               />
             </div>
-            <Button type="submit" className="w-full">
-              Sign Up
-            </Button>
+            <SignupButton />
           </form>
           <div className="mt-4 text-center text-sm">
             Already have an account?{' '}
