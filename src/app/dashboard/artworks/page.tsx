@@ -7,25 +7,25 @@ import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-
 import AddArtworkSheet from './_components/add-artwork-sheet';
 import { getArtworks } from '@/lib/data';
 
 export default async function MyArtworksPage() {
-  // ✅ Server-side Supabase client
+  // ✅ Server-side Supabase client to securely get the session
   const supabase = createServerSupabaseClient();
 
-  // ✅ Get session
+  // ✅ Get session from cookies
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) redirect('/login');
 
-  // ✅ Fetch logged-in artist
+  // ✅ Fetch logged-in artist profile using the user's ID
   const { data: artist, error: artistError } = await supabase
     .from('artists')
     .select('*')
     .eq('user_id', session.user.id)
     .single();
 
+  // If artist profile doesn't exist, show a helpful message and prompt to create one.
   if (artistError || !artist) {
     return (
       <Card>
@@ -39,13 +39,8 @@ export default async function MyArtworksPage() {
     );
   }
 
-  // ✅ Fetch artworks for this artist
-  let artworks = [];
-  try {
-    artworks = await getArtworks({ artist_id: artist.id });
-  } catch (err) {
-    artworks = [];
-  }
+  // ✅ Fetch artworks scoped to the logged-in artist
+  const artworks = await getArtworks({ artist_id: artist.id });
 
   return (
     <Card>
@@ -54,6 +49,7 @@ export default async function MyArtworksPage() {
           <CardTitle>My Artworks</CardTitle>
           <CardDescription>A list of all your artworks on the platform.</CardDescription>
         </div>
+        {/* Pass artist name to the client component */}
         <AddArtworkSheet artistName={artist.name}>
           <Button>
             <PlusCircle className="mr-2 h-4 w-4" />

@@ -1,36 +1,31 @@
 import Link from 'next/link';
-import { redirect } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Paintbrush, User, PlusCircle } from 'lucide-react';
-import { Artwork } from '@/lib/types';
 import { getArtworks } from '@/lib/data';
+import { Artwork } from '@/lib/types';
+import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 export default async function DashboardPage() {
   // ✅ Server-side Supabase client
   const supabase = createServerSupabaseClient();
 
-  // ✅ Get session
+  // ✅ Server-side session check
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) redirect('/login');
 
-  // ✅ Fetch artist row
-  const { data: artist, error: artistError } = await supabase
+  // ✅ Get artist for logged-in user
+  const { data: artist } = await supabase
     .from('artists')
     .select('*')
     .eq('user_id', session.user.id)
     .single();
 
-  if (artistError || !artist) redirect('/login');
+  if (!artist) redirect('/dashboard/edit-profile'); // force profile creation if missing
 
-  // ✅ Fetch artworks for this artist
-  let artworks: Artwork[] = [];
-  try {
-    artworks = await getArtworks({ artist_id: artist.id });
-  } catch (err) {
-    artworks = [];
-  }
+  // ✅ Fetch artworks
+  const artworks: Artwork[] = await getArtworks({ artist_id: artist.id });
 
   const totalArtworks = artworks.length;
   const availableArtworks = artworks.filter(a => a.status === 'available').length;
@@ -39,8 +34,8 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {/* Total Artworks */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Artworks</CardTitle>
@@ -51,6 +46,8 @@ export default async function DashboardPage() {
             <p className="text-xs text-muted-foreground">pieces listed</p>
           </CardContent>
         </Card>
+
+        {/* Available */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Available for Sale</CardTitle>
@@ -58,11 +55,11 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{availableArtworks}</div>
-            <p className="text-xs text-muted-foreground">
-              {totalArtworks > 0 ? ((availableArtworks / totalArtworks) * 100).toFixed(0) : 0}% of your collection
-            </p>
+            <p className="text-xs text-muted-foreground">{totalArtworks > 0 ? ((availableArtworks/totalArtworks)*100).toFixed(0) : 0}% of your collection</p>
           </CardContent>
         </Card>
+
+        {/* Sold */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Sold Artworks</CardTitle>
@@ -73,6 +70,8 @@ export default async function DashboardPage() {
             <p className="text-xs text-muted-foreground">Congratulations!</p>
           </CardContent>
         </Card>
+
+        {/* Portfolio Value */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Portfolio Value</CardTitle>
@@ -85,14 +84,12 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
-      {/* Action Cards */}
+      {/* Manage Artworks & Profile */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
             <CardTitle>Manage Your Artworks</CardTitle>
-            <CardDescription>
-              View, edit, or add new pieces to your public gallery.
-            </CardDescription>
+            <CardDescription>View, edit, or add new pieces to your public gallery.</CardDescription>
           </CardHeader>
           <CardContent>
             <Button asChild>
@@ -106,9 +103,7 @@ export default async function DashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle>Update Your Profile</CardTitle>
-            <CardDescription>
-              Keep your biography and contact information up-to-date.
-            </CardDescription>
+            <CardDescription>Keep your biography and contact information up-to-date.</CardDescription>
           </CardHeader>
           <CardContent>
             <Button asChild>
@@ -120,12 +115,11 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
+      {/* Add New Artwork CTA */}
       <Card className="bg-primary text-primary-foreground">
         <CardHeader>
           <CardTitle>Ready to list a new masterpiece?</CardTitle>
-          <CardDescription className="text-primary-foreground/80">
-            Add your latest creation to the marketplace in just a few steps.
-          </CardDescription>
+          <CardDescription className="text-primary-foreground/80">Add your latest creation to the marketplace in just a few steps.</CardDescription>
         </CardHeader>
         <CardContent>
           <Button variant="secondary" asChild>
