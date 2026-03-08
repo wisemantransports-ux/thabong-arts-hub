@@ -1,84 +1,25 @@
-'use client';
-
-import { createClient } from '@/lib/supabase/client';
-import { useEffect, useState } from 'react';
+import { createClient } from '@/lib/supabase/server';
 import ProfileForm from './_components/profile-form';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { redirect } from 'next/navigation';
 import { Artist } from '@/lib/types';
-import { Skeleton } from '@/components/ui/skeleton';
 
-export default function MyProfilePage() {
-    const [artist, setArtist] = useState<Artist | null>(null);
-    const [loading, setLoading] = useState(true);
+export default async function MyProfilePage() {
+    const supabase = createClient();
 
-    useEffect(() => {
-        const supabase = createClient();
-        const getArtist = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
 
-            // The middleware protects this route. We can assume a user session exists.
-            // We just need to wait for the user object to be available on the client.
-            if (user) {
-                const { data: artistData, error } = await supabase
-                    .from('artists')
-                    .select('*')
-                    .eq('user_id', user.id)
-                    .single();
-                
-                if (error && error.code !== 'PGRST116') {
-                    console.error('Error fetching artist profile:', error.message);
-                }
-                
-                if (artistData) {
-                    setArtist(artistData);
-                }
-            }
-            // Set loading to false after the attempt, so we don't get stuck in a loading state.
-            setLoading(false);
-        };
-        getArtist();
-    }, []);
-    
-    if (loading) {
-        return (
-            <Card>
-                <CardHeader>
-                    <CardTitle>My Profile</CardTitle>
-                    <CardDescription>Loading your profile...</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="space-y-8">
-                        <div className="flex items-center gap-4">
-                            <Skeleton className="h-24 w-24 rounded-full" />
-                            <Skeleton className="h-10 w-56" />
-                        </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                             <div className="space-y-2">
-                                <Skeleton className="h-4 w-20" />
-                                <Skeleton className="h-10 w-full" />
-                            </div>
-                             <div className="space-y-2">
-                                <Skeleton className="h-4 w-20" />
-                                <Skeleton className="h-10 w-full" />
-                            </div>
-                        </div>
-                         <div className="space-y-2">
-                            <Skeleton className="h-4 w-40" />
-                            <Skeleton className="h-10 w-full" />
-                        </div>
-                        <div className="space-y-2">
-                             <Skeleton className="h-4 w-20" />
-                            <Skeleton className="h-24 w-full" />
-                        </div>
-
-                        <Skeleton className="h-10 w-32" />
-                    </div>
-                </CardContent>
-            </Card>
-        );
+    if (!user) {
+        // This should be handled by middleware, but as a safeguard.
+        redirect('/login');
     }
 
+    const { data: artist } = await supabase
+        .from('artists')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+    
     if (!artist) {
        return (
             <Card>
@@ -94,5 +35,5 @@ export default function MyProfilePage() {
        )
     }
 
-    return <ProfileForm artist={artist} />;
+    return <ProfileForm artist={artist as Artist} />;
 }
