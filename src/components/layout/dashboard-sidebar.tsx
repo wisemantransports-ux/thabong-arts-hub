@@ -22,14 +22,11 @@ import {
   SidebarInset,
   SidebarTrigger,
 } from '@/components/ui/sidebar';
-import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-// In a real app, you would fetch the user from the session
-const user = {
-    name: 'Mary Molefe',
-    email: 'artist@example.com',
-    avatar: 'https://picsum.photos/seed/artist1/100/100',
-};
+import { useState, useEffect } from 'react';
+import { createClient } from '@/lib/supabase/client';
+import { type Artist } from '@/lib/types';
+import { Skeleton } from '@/components/ui/skeleton';
 
 
 const navItems = [
@@ -45,6 +42,28 @@ export default function DashboardSidebar({
 }) {
   const pathname = usePathname();
   const currentPage = navItems.slice().reverse().find(item => pathname.startsWith(item.href));
+  const [artist, setArtist] = useState<Artist | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const supabase = createClient();
+    const fetchArtist = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: artistProfile } = await supabase
+          .from('artists')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+        if (artistProfile) {
+          setArtist(artistProfile);
+        }
+      }
+      setIsLoading(false);
+    };
+
+    fetchArtist();
+  }, []);
 
   return (
     <SidebarProvider>
@@ -95,14 +114,31 @@ export default function DashboardSidebar({
             </SidebarMenu>
           </form>
            <div className="flex items-center gap-2 p-2 rounded-md bg-sidebar-accent">
-                <Avatar className="h-9 w-9">
-                  <AvatarImage src={user.avatar} alt={user.name} />
-                  <AvatarFallback>{user.name.split(" ").map(n=>n[0]).join("")}</AvatarFallback>
-                </Avatar>
-                <div className="group-data-[collapsible=icon]:hidden">
-                    <p className="text-sm font-semibold text-sidebar-accent-foreground">{user.name}</p>
-                    <p className="text-xs text-muted-foreground">{user.email}</p>
-                </div>
+                {isLoading ? (
+                  <>
+                    <Skeleton className="h-9 w-9 rounded-full" />
+                    <div className="group-data-[collapsible=icon]:hidden space-y-1">
+                      <Skeleton className="h-4 w-24" />
+                      <Skeleton className="h-3 w-32" />
+                    </div>
+                  </>
+                ) : artist ? (
+                  <>
+                    <Avatar className="h-9 w-9">
+                      <AvatarImage src={artist.profile_image} alt={artist.name} />
+                      <AvatarFallback>{artist.name?.split(" ").map(n=>n[0]).join("")}</AvatarFallback>
+                    </Avatar>
+                    <div className="group-data-[collapsible=icon]:hidden">
+                        <p className="text-sm font-semibold text-sidebar-accent-foreground">{artist.name}</p>
+                        <p className="text-xs text-muted-foreground">{artist.email}</p>
+                    </div>
+                  </>
+                ) : (
+                   <div className="group-data-[collapsible=icon]:hidden">
+                        <p className="text-sm font-semibold text-sidebar-accent-foreground">No Profile</p>
+                        <p className="text-xs text-muted-foreground">Please update</p>
+                    </div>
+                )}
             </div>
         </SidebarFooter>
       </Sidebar>
