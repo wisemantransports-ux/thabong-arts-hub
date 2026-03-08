@@ -1,3 +1,4 @@
+
 import { createClient } from '@/lib/supabase/server';
 import { Artwork, Artist, Event, Business, ArtworkWithArtist } from './types';
 import { notFound } from 'next/navigation';
@@ -52,7 +53,7 @@ export async function getArtists(): Promise<Artist[]> {
     if (error) throw error;
     return data;
   } catch (error) {
-    console.error('Error fetching artists, falling back to mock data:', (error as Error).message);
+    console.warn('Could not fetch artists from Supabase. Falling back to mock data. Error:', (error as Error).message);
     return mockArtists;
   }
 }
@@ -73,7 +74,7 @@ export async function getArtistBySlug(slug: string): Promise<Artist> {
     }
     return data;
   } catch (error) {
-    console.error(`Error fetching artist ${slug}, falling back to mock data:`, (error as Error).message);
+    console.warn(`Could not fetch artist ${slug} from Supabase. Falling back to mock data. Error:`, (error as Error).message);
     const artist = mockArtists.find(a => a.slug === slug);
     if (!artist) notFound();
     return artist;
@@ -96,7 +97,7 @@ export async function getArtistById(id: string): Promise<Artist> {
     }
     return data;
   } catch (error) {
-    console.error(`Error fetching artist ${id}, falling back to mock data:`, (error as Error).message);
+    console.warn(`Could not fetch artist ${id} from Supabase. Falling back to mock data. Error:`, (error as Error).message);
     const artist = mockArtists.find(a => a.id === id);
     if (!artist) notFound();
     return artist;
@@ -131,7 +132,7 @@ export async function getArtworks(filters: { artist_id?: string; limit?: number 
     }
     return data as ArtworkWithArtist[];
   } catch(error) {
-    console.error('Error fetching artworks, falling back to mock data:', (error as Error).message);
+    console.warn('Could not fetch artworks from Supabase. Falling back to mock data. Error:', (error as Error).message);
     return getMockArtworks(filters);
   }
 }
@@ -157,7 +158,7 @@ export async function getArtworkById(id: string): Promise<ArtworkWithArtist> {
     }
     return data as ArtworkWithArtist;
   } catch (error) {
-    console.error(`Error fetching artwork ${id}, falling back to mock data:`, (error as Error).message);
+    console.warn(`Could not fetch artwork ${id} from Supabase. Falling back to mock data. Error:`, (error as Error).message);
     const artwork = mockArtworks.find(a => a.id === id);
     if (!artwork) notFound();
     return artwork;
@@ -185,7 +186,7 @@ export async function getEvents(filters: { limit?: number, past?: boolean } = {}
     if (error) throw error;
     return data;
   } catch(error) {
-    console.error('Error fetching events, falling back to mock data:', (error as Error).message);
+    console.warn('Could not fetch events from Supabase. Falling back to mock data. Error:', (error as Error).message);
     return getMockEvents(filters);
   }
 }
@@ -208,7 +209,7 @@ export async function getBusinesses(filters: { limit?: number } = {}): Promise<B
       if (error) throw error;
       return data;
     } catch(error) {
-      console.error('Error fetching businesses, falling back to mock data:', (error as Error).message);
+      console.warn('Could not fetch businesses from Supabase. Falling back to mock data. Error:', (error as Error).message);
       return getMockBusinesses(filters);
     }
 }
@@ -229,7 +230,7 @@ export async function getBusinessBySlug(slug: string): Promise<Business> {
       }
       return data;
     } catch(error) {
-      console.error(`Error fetching business ${slug}, falling back to mock data:`, (error as Error).message);
+      console.warn(`Could not fetch business ${slug} from Supabase. Falling back to mock data. Error:`, (error as Error).message);
       const business = mockBusinesses.find(b => b.slug === slug);
       if (!business) notFound();
       return business;
