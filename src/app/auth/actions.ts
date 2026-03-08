@@ -4,7 +4,14 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
+const USE_MOCK_DATA = process.env.NEXT_PUBLIC_SUPABASE_URL === 'https://placeholder.supabase.co';
+
 export async function login(formData: FormData) {
+  // If using mock data, simulate a successful login and redirect to dashboard
+  if (USE_MOCK_DATA) {
+    return redirect('/dashboard')
+  }
+
   const supabase = createClient()
   const email = formData.get('email') as string
   const password = formData.get('password') as string
@@ -20,6 +27,11 @@ export async function login(formData: FormData) {
 }
 
 export async function signup(formData: FormData) {
+  // If using mock data, simulate the email confirmation step
+  if (USE_MOCK_DATA) {
+    return redirect('/login?message=Check your email to continue the sign-in process');
+  }
+
   const supabase = createClient()
   const email = formData.get('email') as string
   const password = formData.get('password') as string
@@ -40,6 +52,11 @@ export async function signup(formData: FormData) {
 }
 
 export async function signOut() {
+  // If using mock data, just redirect to home
+  if (USE_MOCK_DATA) {
+    return redirect('/');
+  }
+  
   const supabase = createClient()
   await supabase.auth.signOut()
   return redirect('/')
