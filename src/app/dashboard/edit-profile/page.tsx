@@ -12,16 +12,18 @@ export const metadata = {
 export default async function EditProfilePage() {
   const supabase = createServerSupabaseClient();
 
+  // ✅ Server-side session check
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) redirect('/login');
 
+  // ✅ Fetch logged-in artist profile using the user's ID
   const { data: artist, error } = await supabase
     .from('artists')
     .select('*')
     .eq('user_id', session.user.id)
     .single();
 
-  // If there's an error and it's not the "no rows found" error, show an error page.
+  // If there's a major error (not "no rows found"), show an error page.
   if (error && error.code !== 'PGRST116') {
     return (
       <Card>
@@ -36,11 +38,20 @@ export default async function EditProfilePage() {
     );
   }
 
-  // If the artist profile doesn't exist yet, we still render the form,
-  // but we may pass a null or partial artist object to it.
-  // The ProfileForm component should handle this gracefully.
-  // A new profile will be created on first submission.
-  const artistData = artist || { email: session.user.email };
+  // If the artist profile doesn't exist yet (new signup), we still render the form
+  // with a partial artist object containing the user's email.
+  // This allows the ProfileForm to handle the initial profile CREATION.
+  const artistData = artist || {
+    id: '', // No ID yet
+    user_id: session.user.id,
+    email: session.user.email || '',
+    name: '',
+    slug: '',
+    bio: '',
+    phone: '',
+    profile_image: '',
+    created_at: '',
+  };
 
   return <ProfileForm artist={artistData as Artist} />;
 }

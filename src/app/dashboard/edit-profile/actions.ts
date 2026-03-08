@@ -1,6 +1,6 @@
 'use server';
 
-import { createClient } from '@/lib/supabase/server';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
@@ -15,7 +15,7 @@ export async function updateProfile(
   prevState: { message: string, type: 'success' | 'error' | 'idle' },
   formData: FormData
 ): Promise<{ message: string, type: 'success' | 'error' }> {
-  const supabase = createClient();
+  const supabase = createServerSupabaseClient();
 
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -43,12 +43,13 @@ export async function updateProfile(
   let publicUrl: string | undefined = undefined;
   const imageFile = formData.get('profile_image') as File;
 
-  // Handle image upload
+  // Handle image upload if a new one is provided
   if (imageFile && imageFile.size > 0) {
     const fileExt = imageFile.name.split('.').pop();
     const fileName = `${user.id}-${Date.now()}.${fileExt}`;
     const filePath = `profile-images/${fileName}`;
 
+    // Using upsert: true to replace the image if it already exists.
     const { error: uploadError } = await supabase.storage
       .from('artworks')
       .upload(filePath, imageFile, { upsert: true });
@@ -60,8 +61,18 @@ export async function updateProfile(
     publicUrl = supabase.storage.from('artworks').getPublicUrl(filePath).data.publicUrl;
   }
   
-  // Prepare data for update
-  const updateData: { name: string; phone: string; bio: string; slug: string; profile_image?: string } = {
+  // Prepare data for upsert
+  const upsertData: { 
+    user_id: string;
+    email: string;
+    name: string; 
+    phone: string; 
+    bio: string; 
+    slug: string; 
+    profile_image?: string 
+  } = {
+    user_id: user.id, // This is the key for the upsert operation
+    email: user.email!,
     name,
     phone,
     bio,
@@ -69,25 +80,26 @@ export async function updateProfile(
   };
   
   if (publicUrl) {
-    updateData.profile_image = publicUrl;
+    upsertData.profile_image = publicUrl;
   }
 
-  // Update artist profile in the database
-  const { error: updateError } = await supabase
+  // Use upsert to either create a new profile or update an existing one.
+  // Supabase uses the 'user_id' as the conflict target to find the row to update.
+  const { error: upsertError } = await supabase
     .from('artists')
-    .update(updateData)
-    .eq('user_id', user.id);
+    .upsert(upsertData, { onConflict: 'user_id' });
 
-  if (updateError) {
+  if (upsertError) {
     // Check for unique constraint violation on slug
-    if (updateError.code === '23505') {
+    if (upsertError.code === '23505' && upsertError.message.includes('artists_slug_key')) {
          return { message: `Database Error: The profile URL slug '${slug}' is already taken. Please choose another.`, type: 'error' };
     }
-    return { message: `Database Error: ${updateError.message}`, type: 'error' };
+    return { message: `Database Error: ${upsertError.message}`, type: 'error' };
   }
   
   // Revalidate paths to show updated data
   revalidatePath('/dashboard/edit-profile');
+  revalidatePath('/dashboard');
   revalidatePath('/artists');
   revalidatePath(`/artists/${slug}`);
 

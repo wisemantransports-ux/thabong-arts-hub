@@ -8,7 +8,7 @@ import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 export default async function DashboardPage() {
-  // ✅ Server-side Supabase client
+  // ✅ Server-side Supabase client to securely get the session
   const supabase = createServerSupabaseClient();
 
   // ✅ Server-side session check
@@ -16,15 +16,18 @@ export default async function DashboardPage() {
   if (!session?.user) redirect('/login');
 
   // ✅ Get artist for logged-in user
-  const { data: artist } = await supabase
+  const { data: artist, error: artistError } = await supabase
     .from('artists')
     .select('*')
     .eq('user_id', session.user.id)
     .single();
 
-  if (!artist) redirect('/dashboard/edit-profile'); // force profile creation if missing
+  // If artist profile doesn't exist or has an empty name, force profile completion.
+  if (!artist || artistError || !artist.name) {
+    redirect('/dashboard/edit-profile');
+  }
 
-  // ✅ Fetch artworks
+  // ✅ Fetch artworks scoped to the logged-in artist
   const artworks: Artwork[] = await getArtworks({ artist_id: artist.id });
 
   const totalArtworks = artworks.length;
