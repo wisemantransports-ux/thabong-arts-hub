@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useFormState, useFormStatus } from 'react-dom';
+import { useState, useEffect, useActionState } from 'react';
+import { useFormStatus } from 'react-dom';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -43,7 +43,7 @@ export default function AddArtworkSheet({ children, artistName }: { children: Re
   const { toast } = useToast();
   
   const initialState = { message: '', type: 'idle' as const };
-  const [state, dispatch] = useFormState(addArtwork, initialState);
+  const [state, dispatch] = useActionState(addArtwork, initialState);
   
   // Local state for description to allow AI generation before form submission
   const [description, setDescription] = useState('');

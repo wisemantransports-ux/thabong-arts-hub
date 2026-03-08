@@ -1,7 +1,8 @@
 'use client';
 
-import { useFormState, useFormStatus } from 'react-dom';
-import * as React from 'react';
+import { useActionState } from 'react';
+import { useFormStatus } from 'react-dom';
+import { useState, useEffect, ChangeEvent } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,12 +31,12 @@ function SubmitButton() {
 
 export default function ProfileForm({ artist }: { artist: Artist }) {
   const { toast } = useToast();
-  const [imagePreview, setImagePreview] = React.useState<string | null>(artist.profile_image);
+  const [imagePreview, setImagePreview] = useState<string | null>(artist.profile_image);
 
   const initialState = { message: '', type: 'idle' as const };
-  const [state, dispatch] = useFormState(updateProfile, initialState);
+  const [state, dispatch] = useActionState(updateProfile, initialState);
 
-  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       const reader = new FileReader();
@@ -46,7 +47,7 @@ export default function ProfileForm({ artist }: { artist: Artist }) {
     }
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (state.type === 'success' && state.message) {
       toast({
         title: "Success",
