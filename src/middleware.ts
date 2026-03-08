@@ -8,6 +8,26 @@ export async function middleware(request: NextRequest) {
     },
   })
 
+  const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && 
+                               !process.env.NEXT_PUBLIC_SUPABASE_URL.includes('your-supabase-url');
+
+  if (!isSupabaseConfigured) {
+    const { pathname } = request.nextUrl;
+    const hasMockSession = request.cookies.has('mock_session');
+    const isAuthRoute = pathname.startsWith('/login') || pathname.startsWith('/signup');
+    const isDashboardRoute = pathname.startsWith('/dashboard') || pathname.startsWith('/admin');
+
+    if (!hasMockSession && isDashboardRoute) {
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+
+    if (hasMockSession && isAuthRoute) {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
+    
+    return response;
+  }
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,

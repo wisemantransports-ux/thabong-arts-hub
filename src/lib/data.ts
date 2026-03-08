@@ -3,11 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { Artwork, Artist, Event, Business, ArtworkWithArtist } from './types';
 import { notFound } from 'next/navigation';
 import { mockArtists, mockArtworks, mockEvents, mockBusinesses } from './mock-data';
-
-// A simple check to see if the app is configured to use Supabase
-const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && 
-                           !process.env.NEXT_PUBLIC_SUPABASE_URL.includes('your-supabase-url');
-
+import { isSupabaseConfigured } from './config';
 
 // Helper to apply filters to mock artworks
 const getMockArtworks = (filters: { artist_id?: string; limit?: number } = {}) => {
@@ -44,7 +40,6 @@ const getMockBusinesses = (filters: { limit?: number } = {}) => {
 // ARTISTS
 export async function getArtists(): Promise<Artist[]> {
   if (!isSupabaseConfigured) {
-    console.warn("Supabase not configured, returning mock artists.");
     return mockArtists;
   }
   try {
@@ -53,14 +48,13 @@ export async function getArtists(): Promise<Artist[]> {
     if (error) throw error;
     return data;
   } catch (error) {
-    console.warn('Could not fetch artists from Supabase. Falling back to mock data. Error:', (error as Error).message);
+    console.warn('Could not fetch artists from Supabase, falling back to mock data. Error:', (error as Error).message);
     return mockArtists;
   }
 }
 
 export async function getArtistBySlug(slug: string): Promise<Artist> {
   if (!isSupabaseConfigured) {
-    console.warn(`Supabase not configured, returning mock artist for slug: ${slug}`);
     const artist = mockArtists.find(a => a.slug === slug);
     if (!artist) notFound();
     return artist;
@@ -69,12 +63,14 @@ export async function getArtistBySlug(slug: string): Promise<Artist> {
     const supabase = createClient();
     const { data, error } = await supabase.from('artists').select('*').eq('slug', slug).single();
     if (error || !data) {
-      console.error(`Error fetching artist with slug ${slug}:`, error?.message);
-      notFound();
+      console.warn(`Error fetching artist with slug ${slug}, falling back to mock data:`, error?.message);
+      const mockArtist = mockArtists.find(a => a.slug === slug);
+      if (!mockArtist) notFound();
+      return mockArtist;
     }
     return data;
   } catch (error) {
-    console.warn(`Could not fetch artist ${slug} from Supabase. Falling back to mock data. Error:`, (error as Error).message);
+    console.warn(`Could not fetch artist ${slug} from Supabase, falling back to mock data. Error:`, (error as Error).message);
     const artist = mockArtists.find(a => a.slug === slug);
     if (!artist) notFound();
     return artist;
@@ -83,7 +79,6 @@ export async function getArtistBySlug(slug: string): Promise<Artist> {
 
 export async function getArtistById(id: string): Promise<Artist> {
   if (!isSupabaseConfigured) {
-    console.warn(`Supabase not configured, returning mock artist for id: ${id}`);
     const artist = mockArtists.find(a => a.id === id);
     if (!artist) notFound();
     return artist;
@@ -92,12 +87,14 @@ export async function getArtistById(id: string): Promise<Artist> {
     const supabase = createClient();
     const { data, error } = await supabase.from('artists').select('*').eq('id', id).single();
     if (error || !data) {
-      console.error(`Error fetching artist with id ${id}:`, error?.message);
-      notFound();
+      console.warn(`Error fetching artist with id ${id}, falling back to mock data:`, error?.message);
+      const mockArtist = mockArtists.find(a => a.id === id);
+      if (!mockArtist) notFound();
+      return mockArtist;
     }
     return data;
   } catch (error) {
-    console.warn(`Could not fetch artist ${id} from Supabase. Falling back to mock data. Error:`, (error as Error).message);
+    console.warn(`Could not fetch artist ${id} from Supabase, falling back to mock data. Error:`, (error as Error).message);
     const artist = mockArtists.find(a => a.id === id);
     if (!artist) notFound();
     return artist;
@@ -107,7 +104,6 @@ export async function getArtistById(id: string): Promise<Artist> {
 // ARTWORKS
 export async function getArtworks(filters: { artist_id?: string; limit?: number } = {}): Promise<ArtworkWithArtist[]> {
   if (!isSupabaseConfigured) {
-    console.warn("Supabase not configured, returning mock artworks.");
     return getMockArtworks(filters);
   }
   try {
@@ -132,14 +128,13 @@ export async function getArtworks(filters: { artist_id?: string; limit?: number 
     }
     return data as ArtworkWithArtist[];
   } catch(error) {
-    console.warn('Could not fetch artworks from Supabase. Falling back to mock data. Error:', (error as Error).message);
+    console.warn('Could not fetch artworks from Supabase, falling back to mock data:', (error as Error).message);
     return getMockArtworks(filters);
   }
 }
 
 export async function getArtworkById(id: string): Promise<ArtworkWithArtist> {
   if (!isSupabaseConfigured) {
-    console.warn(`Supabase not configured, returning mock artwork for id: ${id}`);
     const artwork = mockArtworks.find(a => a.id === id);
     if (!artwork) notFound();
     return artwork;
@@ -153,12 +148,14 @@ export async function getArtworkById(id: string): Promise<ArtworkWithArtist> {
       .single();
 
     if (error || !data) {
-      console.error(`Error fetching artwork with id ${id}:`, error?.message);
-      notFound();
+      console.warn(`Error fetching artwork with id ${id}, falling back to mock data:`, error?.message);
+      const mockArtwork = mockArtworks.find(a => a.id === id);
+      if (!mockArtwork) notFound();
+      return mockArtwork;
     }
     return data as ArtworkWithArtist;
   } catch (error) {
-    console.warn(`Could not fetch artwork ${id} from Supabase. Falling back to mock data. Error:`, (error as Error).message);
+    console.warn(`Could not fetch artwork ${id} from Supabase, falling back to mock data. Error:`, (error as Error).message);
     const artwork = mockArtworks.find(a => a.id === id);
     if (!artwork) notFound();
     return artwork;
@@ -168,7 +165,6 @@ export async function getArtworkById(id: string): Promise<ArtworkWithArtist> {
 // EVENTS
 export async function getEvents(filters: { limit?: number, past?: boolean } = {}): Promise<Event[]> {
   if (!isSupabaseConfigured) {
-    console.warn("Supabase not configured, returning mock events.");
     return getMockEvents(filters);
   }
   try {
@@ -186,7 +182,7 @@ export async function getEvents(filters: { limit?: number, past?: boolean } = {}
     if (error) throw error;
     return data;
   } catch(error) {
-    console.warn('Could not fetch events from Supabase. Falling back to mock data. Error:', (error as Error).message);
+    console.warn('Could not fetch events from Supabase, falling back to mock data:', (error as Error).message);
     return getMockEvents(filters);
   }
 }
@@ -194,7 +190,6 @@ export async function getEvents(filters: { limit?: number, past?: boolean } = {}
 // BUSINESSES
 export async function getBusinesses(filters: { limit?: number } = {}): Promise<Business[]> {
     if (!isSupabaseConfigured) {
-      console.warn("Supabase not configured, returning mock businesses.");
       return getMockBusinesses(filters);
     }
     try {
@@ -209,14 +204,13 @@ export async function getBusinesses(filters: { limit?: number } = {}): Promise<B
       if (error) throw error;
       return data;
     } catch(error) {
-      console.warn('Could not fetch businesses from Supabase. Falling back to mock data. Error:', (error as Error).message);
+      console.warn('Could not fetch businesses from Supabase, falling back to mock data:', (error as Error).message);
       return getMockBusinesses(filters);
     }
 }
 
 export async function getBusinessBySlug(slug: string): Promise<Business> {
     if (!isSupabaseConfigured) {
-      console.warn(`Supabase not configured, returning mock business for slug: ${slug}`);
       const business = mockBusinesses.find(b => b.slug === slug);
       if (!business) notFound();
       return business;
@@ -225,12 +219,14 @@ export async function getBusinessBySlug(slug: string): Promise<Business> {
       const supabase = createClient();
       const { data, error } = await supabase.from('businesses').select('*').eq('slug', slug).single();
       if (error || !data) {
-          console.error(`Error fetching business with slug ${slug}:`, error?.message);
-          notFound();
+          console.warn(`Error fetching business with slug ${slug}, falling back to mock data:`, error?.message);
+          const mockBusiness = mockBusinesses.find(b => b.slug === slug);
+          if (!mockBusiness) notFound();
+          return mockBusiness;
       }
       return data;
     } catch(error) {
-      console.warn(`Could not fetch business ${slug} from Supabase. Falling back to mock data. Error:`, (error as Error).message);
+      console.warn(`Could not fetch business ${slug} from Supabase, falling back to mock data. Error:`, (error as Error).message);
       const business = mockBusinesses.find(b => b.slug === slug);
       if (!business) notFound();
       return business;

@@ -11,14 +11,9 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 
-const navLinks = [
-  { href: '/artworks', label: 'Artworks' },
-  { href: '/artists', label: 'Artists' },
-  { href: '/events', label: 'Events' },
-  { href: '/businesses', label: 'Businesses' },
-  { href: '/about', label: 'About' },
-  { href: '/contact', label: 'Contact' },
-];
+const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && 
+                           !process.env.NEXT_PUBLIC_SUPABASE_URL.includes('your-supabase-url');
+
 
 export default function Header() {
   const pathname = usePathname();
@@ -29,6 +24,17 @@ export default function Header() {
   const isDashboard = pathname.startsWith('/dashboard') || pathname.startsWith('/admin');
   
   useEffect(() => {
+    if (!isSupabaseConfigured) {
+        const mockSessionCookie = document.cookie.split('; ').find(row => row.startsWith('mock_session='));
+        if (mockSessionCookie) {
+            setSession({} as Session); // Simulate a session object
+        } else {
+            setSession(null);
+        }
+        setIsLoading(false);
+        return;
+    }
+
     const supabase = createClient();
     const getSession = async () => {
       const { data } = await supabase.auth.getSession();
@@ -44,7 +50,7 @@ export default function Header() {
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, []);
+  }, [pathname]);
 
   if (isDashboard || isLoading) {
     return null; // Don't show the main header on dashboard pages or while loading
@@ -159,3 +165,12 @@ export default function Header() {
     </header>
   );
 }
+
+const navLinks = [
+  { href: '/artworks', label: 'Artworks' },
+  { href: '/artists', label: 'Artists' },
+  { href: '/events', label: 'Events' },
+  { href: '/businesses', label: 'Businesses' },
+  { href: '/about', label: 'About' },
+  { href: '/contact', label: 'Contact' },
+];
