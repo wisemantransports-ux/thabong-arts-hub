@@ -23,7 +23,7 @@ export default async function DashboardPage() {
 
   // If artist profile is missing or incomplete (name is empty), force the user to complete it.
   if (artistError || !artist || !artist.name) {
-    redirect('/dashboard/edit-profile');
+    redirect('/dashboard/edit-profile?next=/dashboard');
   }
 
   const artworks: Artwork[] = await getArtworks({ artist_id: artist.id });
